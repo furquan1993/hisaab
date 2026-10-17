@@ -1,0 +1,10 @@
+# Private financial documents and extracted data
+/data/
+.env
+.env.*
+!.env.example
+
+# Local Python environment
+.venv/
+__pycache__/
+*.pyc
