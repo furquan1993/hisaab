@@ -1,0 +1,1 @@
+This repository hold the code which can be run to fetch all the credit card statements from my emails. After fetching it will parse them, dedupe and update an ongoing database and show it with a nice UI.
