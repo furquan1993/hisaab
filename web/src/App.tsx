@@ -184,7 +184,11 @@ export default function App() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </label>
-            <button className="primary" disabled={!client || busy}>
+            <button
+              type="submit"
+              className="primary"
+              disabled={!client || busy}
+            >
               {busy ? "Signing in…" : "Sign in"}
             </button>
           </form>

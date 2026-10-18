@@ -29,6 +29,15 @@ describe("public-only frontend configuration", () => {
       ),
     ).toBe(false);
     expect(
+      validatePublicConfig("ftp://localhost", "sb_publishable_example"),
+    ).toBe(false);
+    expect(
+      validatePublicConfig(
+        "https://project.supabase.co/rest/v1",
+        "sb_publishable_example",
+      ),
+    ).toBe(false);
+    expect(
       validatePublicConfig(
         "postgresql://user:password@host/db",
         "sb_publishable_example",

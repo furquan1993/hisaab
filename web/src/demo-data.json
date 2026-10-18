@@ -1,0 +1,123 @@
+[
+  {
+    "id": "demo-1",
+    "bill": "2026-01-31",
+    "date": "2025-12-29",
+    "description": "Weekend bookstore",
+    "card": "1",
+    "direction": "debit",
+    "type": "purchase",
+    "selected": true,
+    "amount": "840.00"
+  },
+  {
+    "id": "demo-2",
+    "bill": "2026-01-31",
+    "date": "2026-01-03",
+    "description": "Corner coffee",
+    "card": "2",
+    "direction": "debit",
+    "type": "purchase",
+    "selected": true,
+    "amount": "180.00"
+  },
+  {
+    "id": "demo-3",
+    "bill": "2026-01-31",
+    "date": "2026-01-03",
+    "description": "Corner coffee",
+    "card": "2",
+    "direction": "debit",
+    "type": "purchase",
+    "selected": true,
+    "amount": "180.00"
+  },
+  {
+    "id": "demo-4",
+    "bill": "2026-01-31",
+    "date": "2026-01-12",
+    "description": "Monthly groceries",
+    "card": "3",
+    "direction": "debit",
+    "type": "purchase",
+    "selected": true,
+    "amount": "2450.75"
+  },
+  {
+    "id": "demo-5",
+    "bill": "2026-01-31",
+    "date": "2026-01-15",
+    "description": "Payment received",
+    "card": "1",
+    "direction": "credit",
+    "type": "payment",
+    "selected": true,
+    "amount": "5000.00"
+  },
+  {
+    "id": "demo-6",
+    "bill": "2026-01-31",
+    "date": "2026-01-18",
+    "description": "Streaming subscription",
+    "card": "4",
+    "direction": "debit",
+    "type": "purchase",
+    "selected": true,
+    "amount": "299.00"
+  },
+  {
+    "id": "demo-7",
+    "bill": "2026-01-31",
+    "date": "2026-01-23",
+    "description": "Credit • purpose unclear",
+    "card": "3",
+    "direction": "credit",
+    "type": "unknown",
+    "selected": true,
+    "amount": "125.50"
+  },
+  {
+    "id": "demo-8",
+    "bill": "2026-01-31",
+    "date": "",
+    "description": "Tax • no printed date",
+    "card": "2",
+    "direction": "debit",
+    "type": "tax",
+    "selected": true,
+    "amount": "8.10"
+  },
+  {
+    "id": "demo-9",
+    "bill": "2026-02-28",
+    "date": "2026-01-30",
+    "description": "Late-posted train ticket",
+    "card": "4",
+    "direction": "debit",
+    "type": "purchase",
+    "selected": true,
+    "amount": "920.00"
+  },
+  {
+    "id": "demo-10",
+    "bill": "2026-02-28",
+    "date": "2026-02-02",
+    "description": "Neighborhood pharmacy",
+    "card": "3",
+    "direction": "debit",
+    "type": "purchase",
+    "selected": true,
+    "amount": "460.00"
+  },
+  {
+    "id": "demo-11",
+    "bill": "2026-01-31",
+    "date": "2026-01-03",
+    "description": "Corner coffee • alternate file",
+    "card": "2",
+    "direction": "debit",
+    "type": "purchase",
+    "selected": false,
+    "amount": "180.00"
+  }
+]

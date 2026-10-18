@@ -3,7 +3,10 @@ export function validatePublicConfig(url: string, key: string) {
     const parsed = new URL(url);
     const local = ["localhost", "127.0.0.1"].includes(parsed.hostname);
     if (
-      (!local && parsed.protocol !== "https:") ||
+      !(
+        parsed.protocol === "https:" ||
+        (local && parsed.protocol === "http:")
+      ) ||
       parsed.username ||
       parsed.password ||
       parsed.search ||
