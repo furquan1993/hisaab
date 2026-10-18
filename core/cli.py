@@ -24,7 +24,7 @@ class ArgumentParser(argparse.ArgumentParser):
 
 def _arguments(argv):
     parser = ArgumentParser(
-        description="Parse HDFC statements locally into private transaction JSON.",
+        description="Parse supported bank statements locally into private transaction JSON.",
         allow_abbrev=False,
     )
     subparsers = parser.add_subparsers(dest="command", required=True)

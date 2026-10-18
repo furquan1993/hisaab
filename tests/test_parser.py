@@ -108,6 +108,31 @@ class ParserTests(unittest.TestCase):
                 parse_probe(self.probe)
             self.assertEqual(error.exception.code, "invalid_probe")
 
+    def test_dispatch_rejects_unknown_or_conflicting_bank_identity(self):
+        original = json.loads(self.probe.read_text())
+        for label in ("OTHER BANK", "HDFC BANK YES BANK"):
+            with self.subTest(label=label):
+                payload = json.loads(json.dumps(original))
+                for page in payload["pages"]:
+                    page["text"] = page["text"].replace("HDFC BANK", label)
+                    for word in page["words"]:
+                        if word["text"] == "HDFC":
+                            word["text"] = label
+                self.probe.write_text(json.dumps(payload))
+                with self.assertRaises(ParseError) as error:
+                    parse_probe(self.probe)
+                self.assertEqual(error.exception.code, "unsupported_bank")
+
+    def test_dispatch_reports_no_text_before_attempting_bank_detection(self):
+        self.probe.write_text(
+            json.dumps(
+                {"source": "empty.pdf", "pages": [{"page": 1, "text": "", "words": []}]}
+            )
+        )
+        with self.assertRaises(ParseError) as error:
+            parse_probe(self.probe)
+        self.assertEqual(error.exception.code, "no_text")
+
     def test_private_output_never_overwrites_and_keeps_source(self):
         result = parse_probe(self.probe)
         first = save_statement(result, self.root / "outputs")

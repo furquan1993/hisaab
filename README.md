@@ -1,15 +1,21 @@
 This repository hold the code which can be run to fetch all the credit card statements from my emails. After fetching it will parse them, dedupe and update an ongoing database and show it with a nice UI.
 
-## HDFC statement parser
+## Statement parsers
 
-The first core parser supports the supplied HDFC Regalia and HDFC Swiggy layouts. It produces one standard JSON row per entry, including purchases, payments, cashback, fees, taxes, and unclassified credits. It does not assign spending categories or funding sources.
+The core parser supports the supplied HDFC Regalia, HDFC Swiggy, SBI, and YES Bank layouts. Bank detection uses statement content, not filenames. It produces one standard JSON row per entry, including purchases, payments, cashback, fees, taxes, reversals, and unclassified credits. It does not assign spending categories or funding sources.
 
 ```sh
 uv sync
 uv run python -m core parse data/hdfc_regalia_statement.pdf data/hdfc_swiggy_statement.pdf
 ```
 
-Run this in your own terminal. Encrypted PDFs prompt for a hidden password; passwords are never accepted as command-line arguments or saved. An unencrypted PDF needs no prompt.
+SBI and YES Bank use the same command and output contract:
+
+```sh
+uv run python -m core parse data/sbi_card_statement.pdf data/yes_bank_statement.pdf
+```
+
+Run this in your own terminal. Encrypted PDFs prompt for a hidden password; the CLI never accepts passwords as command-line arguments or writes them to disk. An unencrypted PDF needs no prompt.
 
 For review without reopening the PDFs, use the previously generated extraction JSON:
 
@@ -23,7 +29,9 @@ Exit codes: **0** parsed without known review issues, **1** input/output failure
 
 Current reference checks account for **27 Regalia entries and 15 Swiggy entries**. Every row's date, time, full description, amount, direction, currency, page, and entry type is checked against local private references. These checks use the existing extraction snapshots; fresh encrypted-PDF-to-output validation on your real originals still requires local password entry. Synthetic AES-256 PDFs exercise the full decryption-to-output path automatically.
 
-See [parser contract, implementation, and limitations](docs/hdfc-parser.md). Implementation tracking remains in [Linear](https://linear.app/furquan/project/hisaab-f672b4a38a9f).
+SBI and YES Bank were developed tests-first and checked against three encrypted original PDFs each: **14 SBI entries and 35 YES Bank entries**. Independent references were captured before the adapters existed, using source text for SBI and ruled table cells for YES Bank. Missing SBI tax dates remain null; unexplained credits remain unknown. SBI image-only pages were visually inspected locally as promotional material, but unreadable pages still request coverage review rather than being silently assumed blank.
+
+See the [common contract and HDFC guide](docs/hdfc-parser.md) and [SBI/YES Bank validation guide](docs/parser-validation.md). Implementation tracking remains in [Linear](https://linear.app/furquan/project/hisaab-f672b4a38a9f).
 
 ## Local statement extraction experiment
 
@@ -63,7 +71,15 @@ uv run python -m unittest discover -s tests -v
 
 The `dev` dependency group is installed by default and contains the PDF-generation/encryption tools used only by tests. uv project management follows the [official project guide](https://docs.astral.sh/uv/guides/projects/).
 
-Tests use synthetic PDFs, including AES-256 encryption. They cover text/table extraction, wrong passwords, unencrypted/corrupt inputs, private output permissions, continued processing after an error, and rejection of noninteractive password input. Real bank-layout accuracy still requires inspecting the local sample results.
+Tests use synthetic PDFs, including AES-256 encryption for all supported banks. They cover text/table extraction, wrong passwords, unencrypted/corrupt inputs, private output permissions, continued processing after an error, and rejection of noninteractive password input. Real bank-layout accuracy still requires inspecting the local sample results.
+
+The six SBI/YES Bank original-PDF checks are opt-in and require local private references under `data/expected/banks/` and the Git-ignored, owner-only `credit_card_cred.env` file with `SBI_PASS` and `YESBANK_PASS` assignments:
+
+```sh
+HISAAB_PRIVATE_BANK_TESTS=1 uv run python -m unittest tests.test_bank_private -v
+```
+
+Only these opt-in tests read that credential file; the normal CLI still prompts privately. Never commit credentials, original statements, extracted references, or real transaction fixtures.
 
 Sources: [pdfplumber loading and password support](https://github.com/jsvine/pdfplumber#loading-a-pdf), [text extraction](https://github.com/jsvine/pdfplumber#extracting-text), and [table extraction strategies](https://github.com/jsvine/pdfplumber#extracting-tables).
 
