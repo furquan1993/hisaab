@@ -1,5 +1,30 @@
 This repository hold the code which can be run to fetch all the credit card statements from my emails. After fetching it will parse them, dedupe and update an ongoing database and show it with a nice UI.
 
+## HDFC statement parser
+
+The first core parser supports the supplied HDFC Regalia and HDFC Swiggy layouts. It produces one standard JSON row per entry, including purchases, payments, cashback, fees, taxes, and unclassified credits. It does not assign spending categories or funding sources.
+
+```sh
+uv sync
+uv run python -m core parse data/hdfc_regalia_statement.pdf data/hdfc_swiggy_statement.pdf
+```
+
+Run this in your own terminal. Encrypted PDFs prompt for a hidden password; passwords are never accepted as command-line arguments or saved. An unencrypted PDF needs no prompt.
+
+For review without reopening the PDFs, use the previously generated extraction JSON:
+
+```sh
+uv run python -m core parse-probe data/probes/run-_wpg2cjh/hdfc_regalia_statement.json data/probes/run-_wpg2cjh/hdfc_swiggy_statement.json
+```
+
+Each input creates `data/parsed/run-*/transactions.json`. Open that file in your editor to inspect every row, exact amounts, source locations, raw text, review issues, and per-currency debit/credit totals. The terminal prints only a JSON summary and the output path. Add `--show-transactions` to explicitly print financial records too, or `--output-dir PATH` to choose another output base. Financial output is plaintext; files are 0600 inside new 0700 directories, not encrypted. Keep custom output paths out of Git too.
+
+Exit codes: **0** parsed without known review issues, **1** input/output failure, **2** invalid command arguments, **3** output saved but review is needed, **130** cancelled. When parsing multiple inputs, a failure takes precedence over review-needed status; other inputs are still attempted. Exit 3 is expected for the Regalia sample's two unclassified credits; their amounts/directions are retained, not guessed to be refunds.
+
+Current reference checks account for **27 Regalia entries and 15 Swiggy entries**. Every row's date, time, full description, amount, direction, currency, page, and entry type is checked against local private references. These checks use the existing extraction snapshots; fresh encrypted-PDF-to-output validation on your real originals still requires local password entry. Synthetic AES-256 PDFs exercise the full decryption-to-output path automatically.
+
+See [parser contract, implementation, and limitations](docs/hdfc-parser.md). Implementation tracking remains in [Linear](https://linear.app/furquan/project/hisaab-f672b4a38a9f).
+
 ## Local statement extraction experiment
 
 This experiment evaluates **pdfplumber 0.11.10** against the four sample PDFs. It is not yet a bank-specific parser: extracted table candidates are not validated transaction rows.
