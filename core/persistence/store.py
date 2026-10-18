@@ -6,7 +6,7 @@ These checks are not authentication for holders of privileged DB credentials.
 from contextlib import contextmanager
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from core.persistence.models import Card, Owner
@@ -66,6 +66,51 @@ def require_card(session, owner_id, card_id, *, lock=False):
             "card_not_found", "Card is not available for the selected owner."
         )
     return card
+
+
+def link_owner_auth(engine, owner_id: UUID, auth_user_id: UUID):
+    """Operator-only binding; browser code has no owner-claim operation."""
+    with store_session(engine) as session:
+        owner = session.scalar(
+            select(Owner).where(Owner.id == owner_id).with_for_update()
+        )
+        if owner is None:
+            raise StoreError("owner_not_found", "Selected owner does not exist.")
+        if owner.auth_user_id is not None and owner.auth_user_id != auth_user_id:
+            raise StoreError(
+                "auth_link_exists",
+                "Unlink the current Auth identity explicitly before replacing it.",
+            )
+        exists = session.scalar(
+            text("SELECT EXISTS (SELECT 1 FROM auth.users WHERE id=:subject)"),
+            {"subject": auth_user_id},
+        )
+        if not exists:
+            raise StoreError(
+                "auth_user_not_found",
+                "Create and confirm the Auth user in this project first.",
+            )
+        occupied = session.scalar(
+            select(Owner.id).where(
+                Owner.auth_user_id == auth_user_id, Owner.id != owner_id
+            )
+        )
+        if occupied is not None:
+            raise StoreError(
+                "auth_link_exists", "This Auth identity is already linked to an owner."
+            )
+        owner.auth_user_id = auth_user_id
+
+
+def unlink_owner_auth(engine, owner_id: UUID):
+    """Immediately revoke application data access, including unexpired JWTs."""
+    with store_session(engine) as session:
+        owner = session.scalar(
+            select(Owner).where(Owner.id == owner_id).with_for_update()
+        )
+        if owner is None:
+            raise StoreError("owner_not_found", "Selected owner does not exist.")
+        owner.auth_user_id = None
 
 
 def register_owner(engine, display_name: str) -> UUID:

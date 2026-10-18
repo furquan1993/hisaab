@@ -7,11 +7,11 @@
                 <mxCell id="title" parent="1" style="text;html=0;align=left;fontSize=28;fontStyle=1;fontColor=#0f172a;" value="Hisaab • approved entity relationship model" vertex="1">
                     <mxGeometry height="44" width="1600" x="40" y="20" as="geometry"/>
                 </mxCell>
-                <mxCell id="subtitle" parent="1" style="text;html=0;align=left;fontSize=15;fontColor=#475569;" value="APPROVED MODEL • Five entities • Initial migration deployed • Import workflow under review" vertex="1">
+                <mxCell id="subtitle" parent="1" style="text;html=0;align=left;fontSize=15;fontColor=#475569;" value="APPROVED MODEL • Five entities • Browser identity/API migrations proposed • Original facts preserved" vertex="1">
                     <mxGeometry height="26" width="2100" x="40" y="70" as="geometry"/>
                 </mxCell>
                 <mxCell id="owner" parent="1" style="swimlane;html=0;startSize=38;horizontal=1;rounded=1;arcSize=6;collapsible=0;container=1;fillColor=#dbeafe;swimlaneFillColor=#ffffff;strokeColor=#94a3b8;fontSize=19;fontStyle=1;fontColor=#0f172a;align=left;spacingLeft=14;" value="Owner" vertex="1">
-                    <mxGeometry height="116" width="280" x="40" y="210" as="geometry"/>
+                    <mxGeometry height="142" width="280" x="40" y="210" as="geometry"/>
                 </mxCell>
                 <mxCell id="owner_id" parent="owner" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="PK  id : UUID" vertex="1">
                     <mxGeometry height="26" width="280" y="38" as="geometry"/>
@@ -21,6 +21,9 @@
                 </mxCell>
                 <mxCell id="owner_created_at" parent="owner" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    created_at : TIMESTAMP UTC" vertex="1">
                     <mxGeometry height="26" width="280" y="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="owner_auth_user_id" parent="owner" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;fontFamily=Courier New;fontSize=12;fillColor=#f8fafc;strokeColor=none;" value="UQ  auth_user_id : UUID NULL" vertex="1">
+                    <mxGeometry height="26" width="280" y="116" as="geometry"/>
                 </mxCell>
                 <mxCell id="card" parent="1" style="swimlane;html=0;startSize=38;horizontal=1;rounded=1;arcSize=6;collapsible=0;container=1;fillColor=#dcfce7;swimlaneFillColor=#ffffff;strokeColor=#94a3b8;fontSize=19;fontStyle=1;fontColor=#0f172a;align=left;spacingLeft=14;" value="Card" vertex="1">
                     <mxGeometry height="194" width="300" x="400" y="210" as="geometry"/>

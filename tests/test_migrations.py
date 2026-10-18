@@ -40,7 +40,7 @@ class OfflineMigrationTests(unittest.TestCase):
     def test_single_head_and_no_secret_in_configuration(self):
         config = migration_config()
         self.assertEqual(
-            ScriptDirectory.from_config(config).get_heads(), ["0001_initial_schema"]
+            ScriptDirectory.from_config(config).get_heads(), ["0003_browser_queries"]
         )
         self.assertIsNone(config.get_main_option("sqlalchemy.url"))
 
@@ -90,7 +90,7 @@ class MigrationPostgresTests(PostgresTests):
             self.connection.scalar(
                 text("SELECT version_num FROM public.hisaab_schema_version")
             ),
-            "0001_initial_schema",
+            "0003_browser_queries",
         )
 
     def test_upgrade_is_idempotent(self):

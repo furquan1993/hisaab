@@ -38,6 +38,10 @@ def backup_database(engine):
             .scalars()
             .all()
         )
+        has_api = connection.scalar(
+            text("SELECT to_regnamespace('hisaab_api') IS NOT NULL")
+        )
+    scopes = ["hisaab", "hisaab_api"] if has_api else ["hisaab"]
     if len(revisions) != 1:
         raise StoreError(
             "backup_unavailable", "A single applied migration revision is required."
@@ -61,7 +65,7 @@ def backup_database(engine):
             [
                 executable,
                 "--format=custom",
-                "--schema=hisaab",
+                *[f"--schema={scope}" for scope in scopes],
                 "--no-owner",
                 "--no-acl",
             ],
@@ -82,7 +86,7 @@ def backup_database(engine):
     metadata = {
         "revision": revisions[0],
         "sha256": sha256(completed.stdout).hexdigest(),
-        "scope": "hisaab",
+        "scope": scopes,
         "format": "pg_dump-custom",
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
