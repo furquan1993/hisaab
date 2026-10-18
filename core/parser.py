@@ -4,7 +4,13 @@ import re
 from pathlib import Path
 
 from core import hdfc, sbi, yes_bank
-from core.extraction import Page, ParseError, extract_pdf, extract_probe
+from core.extraction import (
+    Page,
+    ParseError,
+    extract_pdf,
+    extract_pdf_bytes,
+    extract_probe,
+)
 from core.models import Statement
 
 
@@ -42,6 +48,14 @@ def parse_pdf(path: str | Path, *, password: str = "") -> Statement:
     pages, digest = extract_pdf(path, password)
     return _parse_pages(
         pages, source_name=path.name, source_sha256=digest, input_kind="pdf"
+    )
+
+
+def parse_pdf_bytes(data: bytes, *, source_name: str, password: str = "") -> Statement:
+    """Parse the exact original bytes to be persisted; no filesystem re-read."""
+    pages, digest = extract_pdf_bytes(data, password)
+    return _parse_pages(
+        pages, source_name=source_name, source_sha256=digest, input_kind="pdf"
     )
 
 

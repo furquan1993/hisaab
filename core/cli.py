@@ -6,6 +6,7 @@ import json
 import sys
 from pathlib import Path
 
+from core import cli_store
 from core.config import DEFAULT_CONFIG, ConfigurationError, load_config
 from core.database import DatabaseError, check_connection
 from core.extraction import ParseError
@@ -26,10 +27,11 @@ class ArgumentParser(argparse.ArgumentParser):
 
 def _arguments(argv):
     parser = ArgumentParser(
-        description="Parse supported bank statements locally into private transaction JSON.",
+        description="Parse supported statements locally or import originals into the configured SQL database.",
         allow_abbrev=False,
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
+    cli_store.add_arguments(subparsers)
     database = subparsers.add_parser(
         "db-check",
         help="Check private database configuration with SELECT 1.",
@@ -197,14 +199,15 @@ def main(argv=None) -> int:
             {
                 "error": {
                     "code": "usage_error",
-                    "message": "Use: uv run python -m core {parse,parse-probe} PATH [PATH ...], or db-check. "
-                    "Options: --output-dir PATH, --show-transactions, -h.",
+                    "message": "Use: uv run python -m core -h for parser and database commands.",
                 }
             }
         )
         return 2
     if args.command == "db-check":
         return _database_check(args.config)
+    if args.command in cli_store.HANDLERS:
+        return cli_store.run(args, _emit)
     exit_code = 0
     for path in args.paths:
         result = _process_input(path, args)

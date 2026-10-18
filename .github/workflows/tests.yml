@@ -36,6 +36,8 @@ jobs:
           enable-cache: true
       - run: uv sync --locked --no-build
       - name: Unit and disposable PostgreSQL integration tests
+        env:
+          HISAAB_TEST_POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
         run: uv run --locked --no-build python -m unittest discover -s tests -v
       - name: Syntax
         run: uv run --locked --no-build python -m compileall -q core migrations scripts tests

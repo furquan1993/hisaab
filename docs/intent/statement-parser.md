@@ -59,6 +59,16 @@ These are confirmed requirements, not features delivered by the local parser:
 - Implement migrations and review them before applying to the hosted database. No schema creation on app startup.
 - This foundation does not itself deliver the import command, no-op/candidate orchestration, reparse revisions, cleanup, or authenticated multi-user operation.
 
+## Approved statement-loading increment
+
+- Explicit owner/card registration and selection through the trusted local CLI.
+- One immutable original-PDF snapshot for hashing, parsing, and binary storage; preserve original encryption and never reconstruct pages.
+- Atomic writes per PDF, duplicate no-ops for the same owner/card/file hash, conservative competing-file candidates, and same-card concurrency handling.
+- Preserve exact amounts, every row, evidence, and uncertainty. Summaries do not dump transactions or passwords.
+- Restrict cloud-import inputs to the private project data directory. Explicit original retrieval and app-schema backups use fresh owner-only local exports.
+- Verify native backup/restore with synthetic data. Review/merge and approve a controlled hosted smoke load before uploading private statements.
+- No automatic retention deletion, candidate promotion/revision acceptance, or multi-user login is added by this increment.
+
 ## Out of scope for the original local parser slice
 
 Email fetching, Supabase integration, login and access-policy implementation, encrypted password persistence, automated retention cleanup, dashboards, trend analysis, and identifying the bank account paying a credit-card bill. Shared access between users is also out of scope.

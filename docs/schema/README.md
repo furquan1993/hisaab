@@ -1,8 +1,9 @@
 # Approved database model and migrations
 
-The user approved the five-entity model. Its initial SQLAlchemy/Alembic
-implementation is ready for PR review. No migration has been applied to the
-hosted Supabase database; testing uses disposable local PostgreSQL only.
+The user approved the five-entity model. Initial revision `0001_initial_schema`
+was applied to hosted Supabase on 2026-10-18 after PR #3 merged. No financial
+statements were loaded. Subsequent implementation tests use disposable local
+PostgreSQL only; see the [statement-loading guide](../statement-imports.md).
 
 - [Editable draw.io diagram](hisaab-er.drawio)
 - [SVG preview](hisaab-er.svg)
@@ -37,9 +38,11 @@ Schema constraints include:
 - A PDF is either present without a deletion timestamp, or absent with one.
 - Restrictive foreign-key deletes: PDF retention is not a cascade deletion.
 
-These constraints are foundations, not an implemented import command.
-Returning an existing import on duplicate input, classification of competing
-files, and concurrent-import orchestration remain later FUR-11 work.
+The [import service](../../core/imports.py) now adds atomic parser-to-database
+loading, duplicate no-ops, conservative competing-file classification, and
+same-card concurrency serialization on top of these constraints. It requires
+no changes to the deployed model. Reparse/candidate-resolution workflows
+remain separate work.
 
 ## PDF bytes and retention
 
@@ -96,8 +99,9 @@ uv sync --locked
 uv run alembic upgrade head --sql
 ```
 
-After PR review/merge and an explicit deployment decision, inspect the current
-revision, apply the migration, and verify metadata drift:
+Initial deployment is complete. For a future reviewed migration, make an
+explicit deployment/backup decision, inspect the current revision, apply it,
+and verify metadata drift:
 
 ```sh
 uv run alembic current
