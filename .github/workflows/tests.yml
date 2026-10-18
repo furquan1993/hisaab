@@ -28,6 +28,7 @@ jobs:
           --health-retries 10
     env:
       HISAAB_TEST_DATABASE_URL: postgresql+psycopg://hisaab_test@127.0.0.1:5432/hisaab_test
+      HISAAB_TEST_POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0

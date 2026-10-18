@@ -1,0 +1,194 @@
+"""Store CLI boundary: safe JSON only, no raw SQL/driver exceptions."""
+
+import getpass
+import sys
+from hashlib import sha256
+from pathlib import Path
+from uuid import UUID
+
+from core.backup import backup_database
+from core.config import DEFAULT_CONFIG, ConfigurationError, load_config
+from core.database import DatabaseError, create_database_engine
+from core.extraction import ParseError
+from core.imports import import_pdf
+from core.persistence.import_records import list_imports, read_original
+from core.persistence.store import (
+    StoreError,
+    list_cards,
+    list_owners,
+    register_card,
+    register_owner,
+)
+from core.private_files import export_file
+
+
+def add_arguments(subparsers):
+    def command(name, help_text):
+        parser = subparsers.add_parser(name, help=help_text, allow_abbrev=False)
+        parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+        return parser
+
+    owner = command(
+        "owner-create", "Register a data owner, not an authenticated login."
+    )
+    owner.add_argument("name")
+    owners = command("owners-list", "List registered data owners.")
+    card = command("card-create", "Register a card for an explicit owner.")
+    card.add_argument("--owner", type=UUID, required=True)
+    card.add_argument("--bank", choices=("hdfc", "sbi", "yes_bank"), required=True)
+    card.add_argument("--label", required=True)
+    card.add_argument("--last-four")
+    cards = command("cards-list", "List the selected owner's cards.")
+    cards.add_argument("--owner", type=UUID, required=True)
+    imported = command(
+        "import-pdf", "Import original PDFs from the private data directory."
+    )
+    imported.add_argument("--owner", type=UUID, required=True)
+    imported.add_argument("--card", type=UUID, required=True)
+    imported.add_argument("paths", nargs="+", type=Path)
+    imports = command(
+        "imports-list", "List import IDs, counts and review/selection state."
+    )
+    imports.add_argument("--owner", type=UUID, required=True)
+    imports.add_argument("--card", type=UUID)
+    command(
+        "database-backup", "Create a private app-schema archive and migration manifest."
+    )
+    original = command(
+        "original-export", "Export unchanged original PDF bytes privately."
+    )
+    original.add_argument("--owner", type=UUID, required=True)
+    original.add_argument("--import-id", type=UUID, required=True)
+    for parser in (owners, cards, imports):
+        parser.add_argument("--limit", type=int, default=50)
+        parser.add_argument("--offset", type=int, default=0)
+
+
+def _guard(action, emit):
+    try:
+        return action()
+    except (ConfigurationError, DatabaseError, StoreError, ParseError) as error:
+        emit({"error": {"code": error.code, "message": str(error)}})
+        return 1
+    except (KeyboardInterrupt, EOFError):
+        emit(
+            {
+                "error": {
+                    "code": "cancelled",
+                    "message": "Cancelled; prior committed imports remain saved.",
+                }
+            }
+        )
+        return 130
+    except Exception:
+        emit(
+            {
+                "error": {
+                    "code": "store_operation_failed",
+                    "message": "Operation failed; private database and document details suppressed.",
+                }
+            }
+        )
+        return 1
+
+
+def _password():
+    if not sys.stdin.isatty():
+        raise StoreError(
+            "password_required", "Use your own terminal for hidden PDF password entry."
+        )
+    return getpass.getpass("PDF password (hidden): ")
+
+
+def _owner(engine, args, emit):
+    owner = register_owner(engine, args.name)
+    emit({"status": "owner_created", "owner_id": str(owner)})
+    return 0
+
+
+def _card(engine, args, emit):
+    card = register_card(
+        engine, args.owner, bank=args.bank, label=args.label, last_four=args.last_four
+    )
+    emit({"status": "card_created", "owner_id": str(args.owner), "card_id": str(card)})
+    return 0
+
+
+def _list(engine, args, emit):
+    options = dict(limit=args.limit, offset=args.offset)
+    if args.command == "owners-list":
+        rows = list_owners(engine, **options)
+    elif args.command == "cards-list":
+        rows = list_cards(engine, args.owner, **options)
+    else:
+        rows = list_imports(engine, args.owner, card_id=args.card, **options)
+    emit(
+        {"items": rows, "count": len(rows), "limit": args.limit, "offset": args.offset}
+    )
+    return 0
+
+
+def _one_import(engine, args, path, emit):
+    saved = import_pdf(engine, args.owner, args.card, path, password_provider=_password)
+    emit(saved.to_dict())
+    return 3 if saved.needs_review else 0
+
+
+def _imports(engine, args, emit):
+    code = 0
+    for path in args.paths:
+        current = _guard(lambda: _one_import(engine, args, path, emit), emit)
+        if current == 130:
+            return current
+        if current == 1 or code == 0:
+            code = current
+    return code
+
+
+def _original(engine, args, emit):
+    data = read_original(engine, args.owner, args.import_id)
+    destination = export_file(data, "statement.pdf")
+    emit(
+        {
+            "status": "exported",
+            "import_id": str(args.import_id),
+            "output": str(destination),
+            "sha256": sha256(data).hexdigest(),
+        }
+    )
+    return 0
+
+
+def _backup(engine, args, emit):
+    destination = backup_database(engine)
+    emit(
+        {
+            "status": "backed_up",
+            "output": str(destination),
+            "manifest": str(destination.parent / "manifest.json"),
+        }
+    )
+    return 0
+
+
+HANDLERS = {
+    "owner-create": _owner,
+    "owners-list": _list,
+    "card-create": _card,
+    "cards-list": _list,
+    "import-pdf": _imports,
+    "imports-list": _list,
+    "original-export": _original,
+    "database-backup": _backup,
+}
+
+
+def run(args, emit):
+    def action():
+        engine = create_database_engine(load_config(args.config))
+        try:
+            return HANDLERS[args.command](engine, args, emit)
+        finally:
+            engine.dispose()
+
+    return _guard(action, emit)

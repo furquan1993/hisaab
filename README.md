@@ -33,12 +33,32 @@ SBI and YES Bank were developed tests-first and checked against three encrypted 
 
 See the [common contract and HDFC guide](docs/hdfc-parser.md) and [SBI/YES Bank validation guide](docs/parser-validation.md). Implementation tracking remains in [Linear](https://linear.app/furquan/project/hisaab-f672b4a38a9f).
 
+## Statement loading
+
+The [statement-loading guide](docs/statement-imports.md) covers owner/card setup,
+atomic imports, duplicate no-ops, review candidates, original retrieval, and
+private PostgreSQL backup/recovery.
+
+```sh
+uv run python -m core owner-create "Primary"
+uv run python -m core card-create --owner OWNER_UUID --bank hdfc --label "Regalia"
+uv run python -m core import-pdf --owner OWNER_UUID --card CARD_UUID data/statement.pdf
+uv run python -m core imports-list --owner OWNER_UUID
+```
+
+Use returned UUIDs and the correct physical card. Importing writes to the
+configured database; parsing alone does not. Originals are stored unchanged,
+including PDF encryption, never reconstructed from extracted pages. No real
+statements were loaded during implementation. Review/merge this feature and
+establish a backup before the first controlled hosted load.
+
 ## Private database connection
 
 The app has private connection configuration plus an approved five-entity
 SQLAlchemy model and an initial Alembic migration. See the [ER diagram and
-schema/migration guide](docs/schema/README.md). The hosted schema has not been
-migrated yet. Ordinary parsing and db-check never create tables or import data.
+schema/migration guide](docs/schema/README.md). Initial revision
+`0001_initial_schema` was deployed on 2026-10-18. Ordinary parsing and db-check
+never create tables or import data.
 
 Create `config.local.toml` at the repository root using `config.example.toml`
 as the template, without overwriting an existing private configuration. Make the
