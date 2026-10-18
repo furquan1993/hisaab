@@ -95,6 +95,7 @@ class HdfcTests(unittest.TestCase):
         second.footer(380)
         result = parse(first, second)
         self.assertEqual(len(result.transactions), 3)
+        self.assertEqual([row.sequence for row in result.transactions], [1, 2, 3])
         tax = result.transactions[-1]
         self.assertEqual(tax.entry_type, EntryType.TAX)
         self.assertEqual(tax.section, "international")
@@ -209,6 +210,48 @@ class HdfcTests(unittest.TestCase):
         self.assertIn(
             "transaction_outside_supported_table", [i.code for i in result.issues]
         )
+
+    def test_statement_month_is_case_insensitive(self):
+        for month in ("Oct", "OCT", "oct", "oCt"):
+            with self.subTest(month=month):
+                page = HdfcPage()
+                page.header()
+                page.row(250)
+                page.footer(280)
+                page.fragments = [
+                    (text.replace("13 Oct, 2026", f"13 {month}, 2026"), x, top)
+                    for text, x, top in page.fragments
+                ]
+                result = parse(page)
+                self.assertEqual(result.statement_date.isoformat(), "2026-10-13")
+                self.assertEqual(result.issues, ())
+
+    def test_missing_or_invalid_statement_date_is_flagged_without_losing_rows(self):
+        for date_text in ("35 Oct, 2026", "13 xyz, 2026", "unavailable"):
+            with self.subTest(date_text=date_text):
+                page = HdfcPage()
+                page.header()
+                page.row(250)
+                page.footer(280)
+                page.fragments = [
+                    (text.replace("13 Oct, 2026", date_text), x, top)
+                    for text, x, top in page.fragments
+                ]
+                result = parse(page)
+                self.assertIsNone(result.statement_date)
+                self.assertEqual(len(result.transactions), 1)
+                self.assertEqual(
+                    [issue.code for issue in result.issues],
+                    ["statement_date_missing_or_invalid"],
+                )
+
+    def test_blank_document_is_reported_as_no_text(self):
+        for pages in ((), (Page(1, "", ()),)):
+            with self.subTest(pages=len(pages)), self.assertRaises(ParseError) as error:
+                parse_pages(
+                    pages, source_name="empty.pdf", source_sha256="a", input_kind="pdf"
+                )
+            self.assertEqual(error.exception.code, "no_text")
 
     def test_summary_only_table_does_not_mean_successful_empty_statement(self):
         page = HdfcPage()
