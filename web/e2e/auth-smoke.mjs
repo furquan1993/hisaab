@@ -1,5 +1,5 @@
 // Synthetic credentials arrive only through the isolated test runner's environment.
-import { chromium } from "@playwright/test";
+import { chromium, expect } from "@playwright/test";
 const browser = await chromium.launch();
 try {
   const page = await browser.newPage();
@@ -16,10 +16,19 @@ try {
   await page.getByText("SYNTHETIC SHOP", { exact: true }).waitFor();
   await page.reload();
   await page.getByText("SYNTHETIC SHOP", { exact: true }).waitFor();
-  await page.getByRole("button", { name: "View evidence" }).click();
+  const evidenceTrigger = page.getByRole("button", { name: "View evidence" });
+  await evidenceTrigger.click();
+  const evidenceHeading = page.getByRole("heading", {
+    name: "SYNTHETIC SHOP",
+    exact: true,
+  });
+  await expect(evidenceHeading).toBeFocused();
+  await expect(evidenceHeading).toBeInViewport();
   await page
     .getByText("01/01/2026 SYNTHETIC SHOP 123.45", { exact: true })
     .waitFor();
+  await page.getByRole("button", { name: "Close evidence" }).click();
+  await expect(evidenceTrigger).toBeFocused();
   await page.getByRole("tab", { name: "Transaction date" }).click();
   await page.getByText("SYNTHETIC SHOP", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();

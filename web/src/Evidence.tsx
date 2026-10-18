@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { downloadOriginal, evidenceSchema, type BrowserClient } from "./client";
 import type { Entry } from "./domain";
@@ -15,6 +15,13 @@ export default function Evidence({
   const [data, setData] = useState<z.infer<typeof evidenceSchema> | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+  // Focus scrolls the selected evidence into view, including when it is below
+  // a long statement table. Reopening the same row refocuses without refetching.
+  // https://react.dev/reference/react/useRef#manipulating-the-dom-with-a-ref
+  useEffect(() => {
+    heading.current?.focus();
+  }, [row]);
   useEffect(() => {
     setData(null);
     setError("");
@@ -51,11 +58,17 @@ export default function Evidence({
   }
   const issues = [...row.entry_issues, ...row.import_issues];
   return (
-    <aside className="evidence" aria-label="Source evidence">
+    <aside
+      id="source-evidence"
+      className="evidence"
+      aria-label="Source evidence"
+    >
       <div className="section-head">
         <div>
           <span className="eyebrow">ORIGINAL EVIDENCE</span>
-          <h2>{row.description}</h2>
+          <h2 ref={heading} tabIndex={-1}>
+            {row.description}
+          </h2>
         </div>
         <button onClick={onClose} aria-label="Close evidence">
           ×

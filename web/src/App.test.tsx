@@ -36,4 +36,25 @@ it("renders evidence as text without offering fake PDF downloads", async () => {
   expect(
     screen.queryByRole("button", { name: "Download original PDF" }),
   ).toBeNull();
+  expect(document.activeElement).toBe(
+    screen.getByRole("heading", { name: "Weekend bookstore" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Close evidence" }));
+  expect(document.activeElement).toBe(
+    screen.getAllByRole("button", { name: "View evidence" })[0],
+  );
+});
+it("brings already-open evidence back into focus on repeated View clicks", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(
+    screen.getByRole("button", { name: "Explore synthetic demo" }),
+  );
+  const trigger = screen.getAllByRole("button", { name: "View evidence" })[0];
+  await user.click(trigger);
+  trigger.focus();
+  await user.click(trigger);
+  expect(document.activeElement).toBe(
+    screen.getByRole("heading", { name: "Weekend bookstore" }),
+  );
 });
