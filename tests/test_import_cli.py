@@ -96,6 +96,21 @@ class ImportCliTests(ImportTestsBase):
         self.assertEqual(output[0]["items"][0]["transaction_count"], 2)
         self.assertNotIn("SYNTHETIC SHOP", json.dumps(output))
 
+    def test_explicit_reparse_creates_a_review_candidate_without_printing_rows(self):
+        saved = import_pdf(self.engine, self.owner, self.card, self.path)
+        code, output = self.invoke(
+            "reparse-import",
+            "--owner",
+            str(self.owner),
+            "--import-id",
+            str(saved.import_id),
+        )
+        self.assertEqual(code, 3)
+        self.assertEqual(output[0]["status"], "review_candidate")
+        self.assertEqual(output[0]["matched_count"], 2)
+        self.assertNotIn("SYNTHETIC SHOP", json.dumps(output))
+        self.assertNotIn("matches", output[0])
+
     def test_noninteractive_encrypted_pdf_requires_hidden_input(self):
         self.path.write_bytes(encrypt(self.path.read_bytes()))
         with (

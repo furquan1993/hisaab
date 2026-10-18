@@ -17,9 +17,9 @@ All new tables retain owner RLS. API views are security invoker; mutation functi
 
 ## Revision boundary
 
-Current decisions reference immutable entry IDs with restrictive foreign keys. Ordinary duplicate imports still do not reparse or replace records. Full candidate revision matching and acceptance are the next slice: they must preserve logical entry identity for unambiguous unchanged evidence, surface uncertain matches, and never silently relocate decisions. The logical-entry helper currently returns the original entry ID; it is not a completed reparse implementation.
+Current decisions reference immutable logical entry roots with restrictive foreign keys. Ordinary duplicate imports still do not reparse or replace records. Explicit reparsing creates new immutable evidence rows and a pending comparison, borrowing the retained original through a same-owner/card/bill/fingerprint reference rather than copying PDF bytes. Full-provenance matches are automatic only when unique on both sides and at the same sequence position. Everything else requires explicit identity or new-entry decisions and acknowledgement of removed rows. Acceptance checks the published source and complete evidence hashes, inserts immutable lineage bindings, and changes the selected source atomically. Earlier evidence and decisions remain present. Source evidence IDs may change; the separately exposed logical entry ID and decision record identity are preserved.
 
-Corrections, issue acknowledgements, source revision acceptance, funding totals and contribution settlement remain in progress. No financial policy is implied by label assignments.
+Revision APIs and explicit reparse CLI now have isolated PostgreSQL and actual Auth/API coverage. Source comparison UI, corrections, issue acknowledgements, funding totals and contribution settlement remain in progress. No financial policy is implied by label assignments.
 
 ## References
 

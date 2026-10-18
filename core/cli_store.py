@@ -22,6 +22,7 @@ from core.persistence.store import (
     unlink_owner_auth,
 )
 from core.private_files import export_file
+from core.revisions import reparse_import
 
 
 def add_arguments(subparsers):
@@ -55,6 +56,12 @@ def add_arguments(subparsers):
     imported.add_argument("--owner", type=UUID, required=True)
     imported.add_argument("--card", type=UUID, required=True)
     imported.add_argument("paths", nargs="+", type=Path)
+    reparsed = command(
+        "reparse-import",
+        "Propose a parser revision from retained original bytes; never publish automatically.",
+    )
+    reparsed.add_argument("--owner", type=UUID, required=True)
+    reparsed.add_argument("--import-id", type=UUID, required=True)
     imports = command(
         "imports-list", "List import IDs, counts and review/selection state."
     )
@@ -165,6 +172,23 @@ def _imports(engine, args, emit):
     return code
 
 
+def _reparse(engine, args, emit):
+    saved = reparse_import(
+        engine, args.owner, args.import_id, password_provider=_password
+    )
+    emit(
+        {
+            "status": "review_candidate",
+            "revision_id": saved["id"],
+            "base_import_id": saved["base_import_id"],
+            "candidate_import_id": saved["candidate_import_id"],
+            "matched_count": len(saved["plan"]["matches"]),
+            "conflict_count": len(saved["plan"]["unmatched_new"]),
+        }
+    )
+    return 3
+
+
 def _original(engine, args, emit):
     data = read_original(engine, args.owner, args.import_id)
     destination = export_file(data, "statement.pdf")
@@ -199,6 +223,7 @@ HANDLERS = {
     "card-create": _card,
     "cards-list": _list,
     "import-pdf": _imports,
+    "reparse-import": _reparse,
     "imports-list": _list,
     "original-export": _original,
     "database-backup": _backup,

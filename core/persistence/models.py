@@ -22,6 +22,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
@@ -32,6 +33,7 @@ from core.persistence.decisions import (
     EntryDecision,
     FundingAccount,
 )
+from core.persistence.revisions import EntryLink, ParserRevision
 
 __all__ = [
     "Base",
@@ -40,6 +42,8 @@ __all__ = [
     "DecisionEvent",
     "Entry",
     "EntryDecision",
+    "EntryLink",
+    "ParserRevision",
     "FundingAccount",
     "ImportRecord",
     "Owner",
@@ -118,8 +122,37 @@ class ImportRecord(Identity, CreatedAt, Owned, Base):
         UniqueConstraint(
             "owner_id", "statement_id", "id", name="uq_imports_owner_statement_id"
         ),
+        Index(
+            "uq_imports_owner_card_sha256",
+            "owner_id",
+            "card_id",
+            "file_sha256",
+            unique=True,
+            postgresql_where=text("source_import_id IS NULL"),
+        ),
         UniqueConstraint(
-            "owner_id", "card_id", "file_sha256", name="uq_imports_owner_card_sha256"
+            "owner_id",
+            "card_id",
+            "statement_id",
+            "file_sha256",
+            "id",
+            name="uq_imports_source_file",
+        ),
+        ForeignKeyConstraint(
+            ["owner_id", "card_id", "statement_id", "file_sha256", "source_import_id"],
+            [
+                "hisaab.imports.owner_id",
+                "hisaab.imports.card_id",
+                "hisaab.imports.statement_id",
+                "hisaab.imports.file_sha256",
+                "hisaab.imports.id",
+            ],
+            ondelete="RESTRICT",
+            name="fk_imports_source_file",
+        ),
+        CheckConstraint(
+            "source_import_id IS NULL OR source_import_id <> id",
+            name="ck_imports_source_file",
         ),
         ForeignKeyConstraint(
             ["owner_id", "card_id"],
@@ -150,13 +183,15 @@ class ImportRecord(Identity, CreatedAt, Owned, Base):
             name="ck_imports_pdf_size",
         ),
         CheckConstraint(
-            "(pdf_bytes IS NOT NULL AND pdf_deleted_at IS NULL) OR "
-            "(pdf_bytes IS NULL AND pdf_deleted_at IS NOT NULL)",
+            "(source_import_id IS NULL AND ((pdf_bytes IS NOT NULL AND pdf_deleted_at IS NULL) OR "
+            "(pdf_bytes IS NULL AND pdf_deleted_at IS NOT NULL))) OR "
+            "(source_import_id IS NOT NULL AND pdf_bytes IS NULL AND pdf_deleted_at IS NULL)",
             name="ck_imports_pdf_lifecycle",
         ),
     )
     card_id: Mapped[UUID]
     statement_id: Mapped[UUID]
+    source_import_id: Mapped[UUID | None]
     source_filename: Mapped[str] = mapped_column(Text)
     file_sha256: Mapped[str] = mapped_column(String(64))
     file_size_bytes: Mapped[int] = mapped_column(BigInteger)
@@ -181,6 +216,9 @@ class Entry(Identity, Owned, Base):
     __table_args__ = (
         UniqueConstraint("import_id", "sequence", name="uq_entries_import_sequence"),
         UniqueConstraint("owner_id", "id", name="uq_entries_owner_id"),
+        UniqueConstraint(
+            "owner_id", "import_id", "id", name="uq_entries_owner_import_id"
+        ),
         ForeignKeyConstraint(
             ["owner_id", "import_id"],
             [f"{SCHEMA}.imports.owner_id", f"{SCHEMA}.imports.id"],

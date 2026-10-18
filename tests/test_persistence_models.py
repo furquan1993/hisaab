@@ -23,6 +23,8 @@ class ModelContractTests(unittest.TestCase):
                 "hisaab.accounts",
                 "hisaab.entry_decisions",
                 "hisaab.decision_events",
+                "hisaab.parser_revisions",
+                "hisaab.entry_links",
             },
         )
         configure_mappers()
