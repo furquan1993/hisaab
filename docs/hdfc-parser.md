@@ -19,7 +19,7 @@ The supported unit is the observed statement layout, not every historical HDFC f
 - `tests/hdfc_fixture.py`: invented source layouts and actual generated PDF fixtures.
 - `tests/test_hdfc_private.py`: optional private sample validation; skips on a checkout without private reference data.
 
-The existing diagnostic probe is unchanged. Runtime dependencies are unchanged.
+The existing diagnostic probe is unchanged. Runtime dependencies are unchanged. The common public entry points now also dispatch SBI and YES Bank statements; see their [adapter and validation guide](parser-validation.md).
 
 ## Public API
 
@@ -53,7 +53,7 @@ Each transaction contains:
 | `direction` | `debit`, `credit`, or null when ambiguous. Separate from the unsigned amount. |
 | `currency` | Identified currency or null; no conversion or default from a dollar symbol alone. |
 | `entry_type` | `purchase`, `payment`, `refund`, `cashback`, `fee`, `interest`, `tax`, `reversal`, or `unknown`. |
-| `section` | `domestic` or `international` source section; not a currency classification. |
+| `section` | HDFC uses `domestic` or `international`; SBI and YES Bank use `transactions`. A source section, not a currency classification. |
 | `raw_date`, `raw_time`, `raw_amount` | Source field tokens for review. |
 | `source` | One-based page, bounding box in PDF points `(x0, top, x1, bottom)`, and raw row text including wraps. |
 | `issues` | Machine-readable issue codes with page references. |

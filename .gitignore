@@ -2,6 +2,7 @@
 /data/
 .env
 .env.*
+/credit_card_cred.env
 !.env.example
 
 # Local Python environment
