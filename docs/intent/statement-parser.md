@@ -69,6 +69,20 @@ These are confirmed requirements, not features delivered by the local parser:
 - Verify native backup/restore with synthetic data. Review/merge and approve a controlled hosted smoke load before uploading private statements.
 - No automatic retention deletion, candidate promotion/revision acceptance, or multi-user login is added by this increment.
 
+## Approved static review workspace
+
+- Host the static frontend on GitHub Pages. Use Supabase managed Auth and database APIs directly; no custom Python/Node application server or SSR hosting.
+- Initially serve the primary user through Supabase Free email/password authentication. The page asks for application login credentials, never a database connection string/password or privileged API key.
+- Link authenticated identity to the stable application Owner through a trusted setup path. Enforce permissions in database policies/API grants, not merely frontend filters. Bring this security work forward before browser data access.
+- Provide two combined cross-card tables: a statement-date range includes every entry in matching statements, and a transaction-date range includes entries matching that date range. Preserve original card/statement associations. These review filters do not redefine reconciliation-month rules.
+- Keep unknown dates and unresolved extraction issues visible through review paths without inventing inclusion dates. Separate competing imports from selected sources.
+- Accounts mean budget/funding pots, such as Eating out or Furquan pocket money. They are not credit cards and need not be bank accounts. Categories are separate, even if names overlap.
+- Manage accounts/categories and assign them independently to entries. Review supported issues through separately persisted decisions; preserve original extracted facts and PDF bytes. Decisions must survive reloads and appear consistently across both views.
+- Keep raw PDF bytes out of ordinary table queries; evidence and original retrieval are explicit authorized actions. Never bake financial records into the static build or public logs.
+- Suggestions, settlement calculations, browser-side PDF extraction, shared access, transfers, split allocations, budget-limit/balance tracking and automatic retention deletion are outside this first UI milestone.
+- Existing CLI import and backup workflows remain supported. Real hosted loading remains a separately approved backup/smoke-validation gate.
+- Scope and the React + TypeScript + Vite frontend stack are confirmed. Implementation sequencing, API security design and edit/filter details remain subject to review in [the staged delivery plan](https://linear.app/furquan/document/static-review-workspace-confirmed-intent-and-staged-delivery-57d96644cf6b). No browser access policies or UI implementation are implied by this intent update.
+
 ## Out of scope for the original local parser slice
 
 Email fetching, Supabase integration, login and access-policy implementation, encrypted password persistence, automated retention cleanup, dashboards, trend analysis, and identifying the bank account paying a credit-card bill. Shared access between users is also out of scope.

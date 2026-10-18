@@ -1,0 +1,44 @@
+name: Browser workspace
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
+        with:
+          version: "0.11.14"
+          enable-cache: true
+      - run: uv sync --locked --no-build
+      - run: npm ci
+        working-directory: web
+      - run: npm test && npm run build
+        working-directory: web
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - name: Start isolated managed Auth and Data API
+        run: |
+          web/node_modules/.bin/supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor > "${RUNNER_TEMP}/supabase-start.log" 2>&1
+          umask 077
+          web/node_modules/.bin/supabase status -o json > "${RUNNER_TEMP}/supabase-status.json"
+      - name: Actual JWT isolation and browser sign-in checks
+        env:
+          HISAAB_SUPABASE_TESTS: "1"
+          HISAAB_BROWSER_TESTS: "1"
+        run: |
+          export HISAAB_SUPABASE_STATUS_FILE="${RUNNER_TEMP}/supabase-status.json"
+          uv run --locked --no-build python -m unittest tests.test_browser_http tests.test_browser_e2e -v
+      - name: Stop disposable stack
+        if: always()
+        run: web/node_modules/.bin/supabase stop > /dev/null 2>&1 || true

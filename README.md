@@ -52,6 +52,20 @@ including PDF encryption, never reconstructed from extracted pages. No real
 statements were loaded during implementation. Review/merge this feature and
 establish a backup before the first controlled hosted load.
 
+## Static review workspace
+
+The read-only React + TypeScript + Vite workspace combines cards in statement-date
+and transaction-date views, with an all-date review queue and explicit source
+evidence/original retrieval. Supabase Auth and secured managed APIs provide the
+data path; no custom app server or privileged browser credentials.
+
+Start with `cd web`, `npm ci`, then `npm run dev`. Open
+http://127.0.0.1:5173/hisaab/ and choose **Explore synthetic demo**.
+See [setup, security, deployment and verification](docs/browser-workspace.md).
+New Auth/API migrations require separate reviewed rollout approval; they were
+not applied to the hosted project during implementation. Editing and real
+financial loading remain separately gated.
+
 ## Private database connection
 
 The app has private connection configuration plus an approved five-entity
@@ -111,8 +125,8 @@ same Connect dialog instead. Automatic prepared statements are disabled for
 compatibility with transaction pooling too.
 
 **Security boundary:** direct credentials authenticate a database role, not a
-Hisaab user. A privileged role can bypass row-level security. This is a trusted
-single-user local app, not proof of authenticated owner isolation. Do not
+Hisaab user. A privileged role can bypass row-level security. These credentials remain for the trusted
+single-user operator CLI, not for application login or browser distribution. Do not
 distribute these credentials to another user. The TOML file contains plaintext
 secrets; permissions and Git exclusions are not encryption.
 
