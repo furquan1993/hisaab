@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from core.config import ConfigurationError, load_retention_config
 
@@ -10,6 +11,9 @@ class RetentionConfigurationTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name) / "config.local.toml"
+        scope = patch("core.config.CONFIG_ROOT", self.path.parent.resolve())
+        scope.start()
+        self.addCleanup(scope.stop)
 
     def configure(self, content):
         self.path.write_text(content)

@@ -8,7 +8,8 @@ from pathlib import Path
 
 from sqlalchemy.engine import URL
 
-DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / "config.local.toml"
+CONFIG_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_CONFIG = CONFIG_ROOT / "config.local.toml"
 
 
 class ConfigurationError(Exception):
@@ -65,18 +66,40 @@ def _database_url(database: dict) -> str | URL:
     )
 
 
-def _read_config(path: str | Path) -> dict:
-    """Never put configuration contents or parser exceptions in public errors."""
-    path = Path(path)
+def _config_path(path: str | Path) -> Path:
     try:
-        with path.open("rb") as source:
-            if (
-                os.name == "posix"
-                and stat.S_IMODE(os.fstat(source.fileno()).st_mode) & 0o077
+        resolved = Path(path).resolve()
+    except (OSError, RuntimeError):
+        raise ConfigurationError(
+            "config_unreadable", "Cannot resolve the configuration path."
+        ) from None
+    if not resolved.is_relative_to(CONFIG_ROOT) or resolved.suffix.lower() != ".toml":
+        raise ConfigurationError(
+            "config_path_not_allowed",
+            "Configuration must be a TOML file inside the project directory.",
+        )
+    return resolved
+
+
+def _read_config(path: str | Path) -> dict:
+    """Never read arbitrary CLI-selected paths or print private contents."""
+    path = _config_path(path)
+    try:
+        flags = (
+            os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+        )
+        with os.fdopen(os.open(path, flags), "rb") as source:
+            info = os.fstat(source.fileno())
+            if not stat.S_ISREG(info.st_mode):
+                raise ConfigurationError(
+                    "config_unreadable", "Configuration must be a regular file."
+                )
+            if os.name == "posix" and (
+                stat.S_IMODE(info.st_mode) & 0o077 or info.st_uid != os.geteuid()
             ):
                 raise ConfigurationError(
                     "config_permissions",
-                    "Make the database configuration owner-only (mode 0600).",
+                    "Configuration must be owned by the current user and mode 0600.",
                 )
             payload = tomllib.load(source)
     except FileNotFoundError:

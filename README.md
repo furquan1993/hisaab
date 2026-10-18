@@ -72,7 +72,10 @@ The check executes `SELECT 1`, closes the connection, and prints only a JSON
 success or sanitized error. It returns 0 for success, 1 for configuration or
 connection failure, 2 for invalid arguments, and 130 for cancellation.
 An empty configuration deliberately fails without opening a network connection.
-The optional `db-check --config PATH` selects another private TOML file.
+The optional `db-check --config PATH` selects another private TOML file inside
+the project directory. Paths escaping that directory (including symlink escapes)
+and nonregular files are rejected before reading. Custom files are not
+automatically Git-ignored; keep them under `data/` or add an explicit exclusion.
 
 SQLAlchemy **2.1.5** supplies the database boundary, with Psycopg **3.3.6** for
 PostgreSQL. Standard `postgresql://` and `postgres://` URIs are normalized to
