@@ -1,0 +1,255 @@
+<mxfile host="65bd71144e" compressed="false">
+    <diagram id="hisaab-er" name="Hisaab ER">
+        <mxGraphModel dx="2325" dy="1139" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1140" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" parent="1" style="text;html=0;align=left;fontSize=28;fontStyle=1;fontColor=#0f172a;" value="Hisaab • approved entity relationship model" vertex="1">
+                    <mxGeometry height="44" width="1600" x="40" y="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="subtitle" parent="1" style="text;html=0;align=left;fontSize=15;fontColor=#475569;" value="APPROVED MODEL • Five entities • Migration ready for review • No hosted schema changes" vertex="1">
+                    <mxGeometry height="26" width="2100" x="40" y="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="owner" parent="1" style="swimlane;html=0;startSize=38;horizontal=1;rounded=1;arcSize=6;collapsible=0;container=1;fillColor=#dbeafe;swimlaneFillColor=#ffffff;strokeColor=#94a3b8;fontSize=19;fontStyle=1;fontColor=#0f172a;align=left;spacingLeft=14;" value="Owner" vertex="1">
+                    <mxGeometry height="116" width="280" x="40" y="210" as="geometry"/>
+                </mxCell>
+                <mxCell id="owner_id" parent="owner" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="PK  id : UUID" vertex="1">
+                    <mxGeometry height="26" width="280" y="38" as="geometry"/>
+                </mxCell>
+                <mxCell id="owner_display_name" parent="owner" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    display_name : TEXT" vertex="1">
+                    <mxGeometry height="26" width="280" y="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="owner_created_at" parent="owner" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    created_at : TIMESTAMP UTC" vertex="1">
+                    <mxGeometry height="26" width="280" y="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="card" parent="1" style="swimlane;html=0;startSize=38;horizontal=1;rounded=1;arcSize=6;collapsible=0;container=1;fillColor=#dcfce7;swimlaneFillColor=#ffffff;strokeColor=#94a3b8;fontSize=19;fontStyle=1;fontColor=#0f172a;align=left;spacingLeft=14;" value="Card" vertex="1">
+                    <mxGeometry height="194" width="300" x="400" y="210" as="geometry"/>
+                </mxCell>
+                <mxCell id="card_id" parent="card" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="PK  id : UUID" vertex="1">
+                    <mxGeometry height="26" width="300" y="38" as="geometry"/>
+                </mxCell>
+                <mxCell id="card_owner_id" parent="card" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="FK  owner_id : UUID" vertex="1">
+                    <mxGeometry height="26" width="300" y="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="card_bank" parent="card" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    bank : TEXT" vertex="1">
+                    <mxGeometry height="26" width="300" y="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="card_label" parent="card" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    label : TEXT" vertex="1">
+                    <mxGeometry height="26" width="300" y="116" as="geometry"/>
+                </mxCell>
+                <mxCell id="card_last_four" parent="card" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    last_four : TEXT?" vertex="1">
+                    <mxGeometry height="26" width="300" y="142" as="geometry"/>
+                </mxCell>
+                <mxCell id="card_created_at" parent="card" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    created_at : TIMESTAMP UTC" vertex="1">
+                    <mxGeometry height="26" width="300" y="168" as="geometry"/>
+                </mxCell>
+                <mxCell id="statement" parent="1" style="swimlane;html=0;startSize=38;horizontal=1;rounded=1;arcSize=6;collapsible=0;container=1;fillColor=#fef3c7;swimlaneFillColor=#ffffff;strokeColor=#94a3b8;fontSize=19;fontStyle=1;fontColor=#0f172a;align=left;spacingLeft=14;" value="Statement" vertex="1">
+                    <mxGeometry height="194" width="350" x="800" y="210" as="geometry"/>
+                </mxCell>
+                <mxCell id="statement_id" parent="statement" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="PK  id : UUID" vertex="1">
+                    <mxGeometry height="26" width="350" y="38" as="geometry"/>
+                </mxCell>
+                <mxCell id="statement_owner_id" parent="statement" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="FK  owner_id : UUID" vertex="1">
+                    <mxGeometry height="26" width="350" y="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="statement_card_id" parent="statement" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="FK  card_id : UUID" vertex="1">
+                    <mxGeometry height="26" width="350" y="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="statement_statement_date" parent="statement" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    statement_date : DATE?" vertex="1">
+                    <mxGeometry height="26" width="350" y="116" as="geometry"/>
+                </mxCell>
+                <mxCell id="statement_active_import_id" parent="statement" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="FK  active_import_id : UUID?" vertex="1">
+                    <mxGeometry height="26" width="350" y="142" as="geometry"/>
+                </mxCell>
+                <mxCell id="statement_created_at" parent="statement" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    created_at : TIMESTAMP UTC" vertex="1">
+                    <mxGeometry height="26" width="350" y="168" as="geometry"/>
+                </mxCell>
+                <mxCell id="import" parent="1" style="swimlane;html=0;startSize=38;horizontal=1;rounded=1;arcSize=6;collapsible=0;container=1;fillColor=#ede9fe;swimlaneFillColor=#ffffff;strokeColor=#94a3b8;fontSize=19;fontStyle=1;fontColor=#0f172a;align=left;spacingLeft=14;" value="Import" vertex="1">
+                    <mxGeometry height="480" width="390" x="1250" y="210" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_id" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="PK  id : UUID" vertex="1">
+                    <mxGeometry height="26" width="390" y="38" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_owner_id" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="FK  owner_id : UUID" vertex="1">
+                    <mxGeometry height="26" width="390" y="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_card_id" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="FK  card_id : UUID" vertex="1">
+                    <mxGeometry height="26" width="390" y="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_statement_id" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="FK  statement_id : UUID" vertex="1">
+                    <mxGeometry height="26" width="390" y="116" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_source_filename" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    source_filename : TEXT" vertex="1">
+                    <mxGeometry height="26" width="390" y="142" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_file_sha256" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="UQ* file_sha256 : TEXT" vertex="1">
+                    <mxGeometry height="26" width="390" y="168" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_file_size_bytes" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    file_size_bytes : BIGINT" vertex="1">
+                    <mxGeometry height="26" width="390" y="194" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_pdf_bytes" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    pdf_bytes : BINARY?" vertex="1">
+                    <mxGeometry height="26" width="390" y="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_pdf_deleted_at" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    pdf_deleted_at : TIMESTAMP UTC?" vertex="1">
+                    <mxGeometry height="26" width="390" y="246" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_parsed_statement_date" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    parsed_statement_date : DATE?" vertex="1">
+                    <mxGeometry height="26" width="390" y="272" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_page_count" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    page_count : INTEGER" vertex="1">
+                    <mxGeometry height="26" width="390" y="298" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_parser_version" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    parser_version : TEXT" vertex="1">
+                    <mxGeometry height="26" width="390" y="324" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_extractor_version" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    extractor_version : TEXT" vertex="1">
+                    <mxGeometry height="26" width="390" y="350" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_schema_version" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    schema_version : INTEGER" vertex="1">
+                    <mxGeometry height="26" width="390" y="376" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_review_status" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    review_status : TEXT" vertex="1">
+                    <mxGeometry height="26" width="390" y="402" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_issues" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    issues : JSON" vertex="1">
+                    <mxGeometry height="26" width="390" y="428" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_created_at" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    created_at : TIMESTAMP UTC" vertex="1">
+                    <mxGeometry height="26" width="390" y="454" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry" parent="1" style="swimlane;html=0;startSize=38;horizontal=1;rounded=1;arcSize=6;collapsible=0;container=1;fillColor=#ffe4e6;swimlaneFillColor=#ffffff;strokeColor=#94a3b8;fontSize=19;fontStyle=1;fontColor=#0f172a;align=left;spacingLeft=14;" value="Entry" vertex="1">
+                    <mxGeometry height="532" width="380" x="1760" y="210" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_id" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="PK  id : UUID" vertex="1">
+                    <mxGeometry height="26" width="380" y="38" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_owner_id" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="FK  owner_id : UUID" vertex="1">
+                    <mxGeometry height="26" width="380" y="64" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_import_id" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="FK  import_id : UUID" vertex="1">
+                    <mxGeometry height="26" width="380" y="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_sequence" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="UQ* sequence : INTEGER" vertex="1">
+                    <mxGeometry height="26" width="380" y="116" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_transaction_date" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    transaction_date : DATE?" vertex="1">
+                    <mxGeometry height="26" width="380" y="142" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_transaction_time" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    transaction_time : TIME?" vertex="1">
+                    <mxGeometry height="26" width="380" y="168" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_description" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    description : TEXT" vertex="1">
+                    <mxGeometry height="26" width="380" y="194" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_amount" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    amount : NUMERIC(20,2)?" vertex="1">
+                    <mxGeometry height="26" width="380" y="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_direction" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    direction : TEXT?" vertex="1">
+                    <mxGeometry height="26" width="380" y="246" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_currency" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    currency : TEXT?" vertex="1">
+                    <mxGeometry height="26" width="380" y="272" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_entry_type" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    entry_type : TEXT" vertex="1">
+                    <mxGeometry height="26" width="380" y="298" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_section" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    section : TEXT" vertex="1">
+                    <mxGeometry height="26" width="380" y="324" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_raw_date" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    raw_date : TEXT" vertex="1">
+                    <mxGeometry height="26" width="380" y="350" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_raw_time" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    raw_time : TEXT" vertex="1">
+                    <mxGeometry height="26" width="380" y="376" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_raw_amount" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    raw_amount : TEXT" vertex="1">
+                    <mxGeometry height="26" width="380" y="402" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_source_page" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    source_page : INTEGER" vertex="1">
+                    <mxGeometry height="26" width="380" y="428" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_source_bbox" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    source_bbox : JSON" vertex="1">
+                    <mxGeometry height="26" width="380" y="454" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_source_raw_text" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    source_raw_text : TEXT" vertex="1">
+                    <mxGeometry height="26" width="380" y="480" as="geometry"/>
+                </mxCell>
+                <mxCell id="entry_issues" parent="entry" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    issues : JSON" vertex="1">
+                    <mxGeometry height="26" width="380" y="506" as="geometry"/>
+                </mxCell>
+                <mxCell id="rel_1" edge="1" parent="1" source="owner_id" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=20;html=0;strokeWidth=2;strokeColor=#334155;dashed=0;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;fontSize=12;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="card_owner_id" value="owns">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="rel_2" edge="1" parent="1" source="card_id" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=20;html=0;strokeWidth=2;strokeColor=#334155;dashed=0;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;fontSize=12;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="statement_card_id" value="has bills">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="rel_3" edge="1" parent="1" source="statement_id" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=20;html=0;strokeWidth=2;strokeColor=#334155;dashed=0;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;fontSize=12;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="import_statement_id" value="has source files">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="rel_4" edge="1" parent="1" source="import_id" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=20;html=0;strokeWidth=2;strokeColor=#334155;dashed=0;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;fontSize=12;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="entry_import_id" value="contains rows">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="rel_5" edge="1" parent="1" source="statement_active_import_id" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=20;html=0;strokeWidth=1.4;strokeColor=#64748b;dashed=1;startArrow=ERzeroToOne;startFill=0;endArrow=ERzeroToOne;endFill=0;fontSize=12;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="import_id" value="selected source (optional)">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1195" y="365"/>
+                            <mxPoint x="1195" y="170"/>
+                            <mxPoint x="1220" y="170"/>
+                            <mxPoint x="1220" y="261"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rel_6" edge="1" parent="1" source="owner_id" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=20;html=0;strokeWidth=1.4;strokeColor=#64748b;dashed=1;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;fontSize=12;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="statement_owner_id" value="owner scope">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="350" y="261"/>
+                            <mxPoint x="350" y="145"/>
+                            <mxPoint x="770" y="145"/>
+                            <mxPoint x="770" y="287"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rel_7" edge="1" parent="1" source="owner_id" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=20;html=0;strokeWidth=1.4;strokeColor=#64748b;dashed=1;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;fontSize=12;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="import_owner_id" value="owner scope">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="340" y="261"/>
+                            <mxPoint x="340" y="125"/>
+                            <mxPoint x="1210" y="125"/>
+                            <mxPoint x="1210" y="287"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rel_8" edge="1" parent="1" source="owner_id" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=20;html=0;strokeWidth=1.4;strokeColor=#64748b;dashed=1;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;fontSize=12;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="entry_owner_id" value="owner scope">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="330" y="261"/>
+                            <mxPoint x="330" y="105"/>
+                            <mxPoint x="1725" y="105"/>
+                            <mxPoint x="1725" y="287"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rel_9" edge="1" parent="1" source="card_id" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=20;html=0;strokeWidth=1.4;strokeColor=#64748b;dashed=1;startArrow=ERone;startFill=0;endArrow=ERzeroToMany;endFill=0;fontSize=12;fontColor=#334155;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" target="import_card_id" value="same owner / card">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="730" y="261"/>
+                            <mxPoint x="730" y="755"/>
+                            <mxPoint x="1215" y="755"/>
+                            <mxPoint x="1215" y="313"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rules" parent="1" style="rounded=1;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=18;fontSize=15;fontColor=#1e293b;strokeColor=#cbd5e1;fillColor=#f8fafc;" value="IDENTITY AND CONSISTENCY&#xa;&#xa;• PK = primary key; FK = foreign key; ? = nullable.&#xa;• Solid relationships: one parent to zero or many children.&#xa;• Import UQ*: (owner_id, card_id, file_sha256).&#xa;• Entry UQ*: (import_id, sequence), never merchant / amount.&#xa;• Enforce same-owner composite foreign keys throughout.&#xa;• active_import_id must belong to the same statement.&#xa;• Candidate files never silently replace the selected source." vertex="1">
+                    <mxGeometry height="260" width="680" x="40" y="815" as="geometry"/>
+                </mxCell>
+                <mxCell id="retention" parent="1" style="rounded=1;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=18;fontSize=15;fontColor=#1e293b;strokeColor=#cbd5e1;fillColor=#f8fafc;" value="PDF RETENTION — CONFIGURABLE POLICY&#xa;&#xa;• PDF bytes live on Import; ordinary queries exclude them.&#xa;• pdf_months = 24 is a configurable default, not a fixed limit.&#xa;• pdf_cleanup_enabled = false prevents policy cleanup.&#xa;• On cleanup: clear pdf_bytes and set pdf_deleted_at.&#xa;• Keep imports, fingerprints, and extracted entries.&#xa;• Missing statement dates require review, not invented expiry.&#xa;• Applying changes to existing PDFs: awaiting confirmation." vertex="1">
+                    <mxGeometry height="260" width="680" x="750" y="815" as="geometry"/>
+                </mxCell>
+                <mxCell id="evidence" parent="1" style="rounded=1;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=18;fontSize=15;fontColor=#1e293b;strokeColor=#cbd5e1;fillColor=#f8fafc;" value="EVIDENCE AND IMPLEMENTATION BOUNDARY&#xa;&#xa;• amount uses exact Decimal-compatible NUMERIC, not float.&#xa;• Preserve nulls, raw source evidence, and parser issues.&#xa;• review_status: pending / reviewed / rejected.&#xa;• Totals use entries from the statement&#39;s active import.&#xa;• BINARY maps to PostgreSQL bytea through the SQL layer.&#xa;• Owner records alone do not provide authentication.&#xa;• Default-deny RLS is not per-user authentication.&#xa;• Versioned migration awaits PR review before deployment." vertex="1">
+                    <mxGeometry height="260" width="680" x="1460" y="815" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
