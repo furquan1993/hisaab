@@ -1,0 +1,20 @@
+# Copy to config.local.toml, make it mode 0600, and edit only that private copy.
+# Copy fields from Supabase's Connect dialog. Quote strings, but not the port.
+# pass is the literal database password: do not URL-encode it in this form.
+[database]
+host = 'HOST_FROM_SUPABASE'
+port = 5432
+database = 'postgres'
+user = 'USER_FROM_SUPABASE'
+pass = ''
+sslmode = 'require'
+connect_timeout_seconds = 10
+
+# Alternative: replace the fields above with a single url setting.
+# In URL form, reserved password characters must be percent-encoded.
+# url = 'postgresql://USER:PASSWORD@HOST:5432/postgres?sslmode=require'
+
+# Configurable policy only. No cleanup job runs in this schema-foundation slice.
+[retention]
+pdf_months = 24
+pdf_cleanup_enabled = false

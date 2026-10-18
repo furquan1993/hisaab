@@ -1,4 +1,4 @@
-"""Local parsing command. Stdout is JSON; financial rows require explicit opt-in."""
+"""Local parsing and database checks. Stdout is JSON; financial rows are opt-in."""
 
 import argparse
 import getpass
@@ -6,6 +6,8 @@ import json
 import sys
 from pathlib import Path
 
+from core.config import DEFAULT_CONFIG, ConfigurationError, load_config
+from core.database import DatabaseError, check_connection
 from core.extraction import ParseError
 from core.models import Statement
 from core.output import save_statement
@@ -28,6 +30,12 @@ def _arguments(argv):
         allow_abbrev=False,
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
+    database = subparsers.add_parser(
+        "db-check",
+        help="Check private database configuration with SELECT 1.",
+        allow_abbrev=False,
+    )
+    database.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     for command, help_text in (
         (
             "parse",
@@ -156,6 +164,31 @@ def _process_input(path: Path, args: argparse.Namespace) -> int:
     return 1
 
 
+def _database_check(path: Path) -> int:
+    try:
+        check_connection(load_config(path))
+    except (ConfigurationError, DatabaseError) as error:
+        _emit({"error": {"code": error.code, "message": str(error)}})
+        return 1
+    except (KeyboardInterrupt, EOFError):
+        _emit(
+            {"error": {"code": "cancelled", "message": "Connection check cancelled."}}
+        )
+        return 130
+    except Exception:
+        _emit(
+            {
+                "error": {
+                    "code": "database_unavailable",
+                    "message": "Database check failed; no connection details printed.",
+                }
+            }
+        )
+        return 1
+    _emit({"status": "connected"})
+    return 0
+
+
 def main(argv=None) -> int:
     try:
         args = _arguments(argv)
@@ -164,12 +197,14 @@ def main(argv=None) -> int:
             {
                 "error": {
                     "code": "usage_error",
-                    "message": "Use: uv run python -m core {parse,parse-probe} PATH [PATH ...]. "
+                    "message": "Use: uv run python -m core {parse,parse-probe} PATH [PATH ...], or db-check. "
                     "Options: --output-dir PATH, --show-transactions, -h.",
                 }
             }
         )
         return 2
+    if args.command == "db-check":
+        return _database_check(args.config)
     exit_code = 0
     for path in args.paths:
         result = _process_input(path, args)
