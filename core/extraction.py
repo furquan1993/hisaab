@@ -64,7 +64,11 @@ def _read(path: Path) -> bytes:
 
 def extract_pdf(path: Path, password: str = "") -> tuple[tuple[Page, ...], str]:
     """Open in memory; never write a decrypted PDF."""
-    data = _read(path)
+    return extract_pdf_bytes(_read(path), password)
+
+
+def extract_pdf_bytes(data: bytes, password: str = "") -> tuple[tuple[Page, ...], str]:
+    """Extract and fingerprint exactly one immutable byte snapshot."""
     try:
         document = pdfplumber.open(BytesIO(data), password=password)
     except (PDFPasswordIncorrect, PdfminerException) as error:
