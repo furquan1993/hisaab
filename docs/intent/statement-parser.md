@@ -8,7 +8,9 @@ Reconcile all credit-card statements for a month in one place: extract every ent
 
 ## Users and privacy
 
-Initially, Hisaab serves the user and their wife through separate logins. Neither can access the other's cards, statements, transactions, allocations, settlements, or learned corrections. Allow additional users later without changing this ownership principle.
+The first database milestone serves only the primary user through a trusted local CLI using private direct database credentials. That authenticates a database role, not an individual application user. Do not enable a second user or distribute these credentials until authenticated isolation is implemented.
+
+The eventual product serves the user and their wife through separate logins. Neither can access the other's cards, statements, transactions, allocations, settlements, or learned corrections. Allow additional users later without changing this ownership principle.
 
 ## First implementation slice
 
@@ -43,10 +45,21 @@ These are confirmed requirements, not features delivered by the local parser:
 
 - Fetch statements from email, parse and deduplicate imports, categorize spending, and support later trend analysis.
 - Use Supabase as the cloud data platform, with database-enforced user isolation.
-- Retain original statements privately for 24 months from the statement date, then delete them automatically.
+- Retain original statements privately for a configurable number of calendar months from the statement date. Twenty-four months is a default, not a fixed limit. Cleanup is disabled by default; scheduling/deletion behavior and applying changes to existing PDFs need explicit review.
 - Keep extracted data indefinitely.
 
-## Out of scope for the first slice
+## Approved database foundation
+
+- Use Supabase/PostgreSQL directly, without an interim SQLite store.
+- Use SQLAlchemy ORM and Alembic migrations, keeping parser dataclasses separate.
+- Use five entities: Owner, Card, Statement, Import, and Entry. Statement is a logical bill; Import is a particular file/extraction. PDF bytes live on Import.
+- Preserve UUID identities, exact money, file fingerprints, duplicate-looking entries, original evidence, and unresolved facts. Competing files must not silently replace the selected source.
+- Keep connection configuration private in an owner-only, Git-ignored TOML file, shared by the app and migration tooling. Never store PDF passwords in the schema.
+- Keep SQL/backend-specific migrations and security isolated. PostgreSQL is the first supported persistence backend; other engines require adapters/migrations and tests.
+- Implement migrations and review them before applying to the hosted database. No schema creation on app startup.
+- This foundation does not itself deliver the import command, no-op/candidate orchestration, reparse revisions, cleanup, or authenticated multi-user operation.
+
+## Out of scope for the original local parser slice
 
 Email fetching, Supabase integration, login and access-policy implementation, encrypted password persistence, automated retention cleanup, dashboards, trend analysis, and identifying the bank account paying a credit-card bill. Shared access between users is also out of scope.
 

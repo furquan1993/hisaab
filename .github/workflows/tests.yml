@@ -1,0 +1,41 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: hisaab_test
+          POSTGRES_DB: hisaab_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hisaab_test -d hisaab_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      HISAAB_TEST_DATABASE_URL: postgresql+psycopg://hisaab_test@127.0.0.1:5432/hisaab_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.11.14"
+          enable-cache: true
+      - run: uv sync --locked --no-build
+      - name: Unit and disposable PostgreSQL integration tests
+        run: uv run --locked --no-build python -m unittest discover -s tests -v
+      - name: Syntax
+        run: uv run --locked --no-build python -m compileall -q core migrations scripts tests

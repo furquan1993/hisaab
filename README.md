@@ -33,6 +33,89 @@ SBI and YES Bank were developed tests-first and checked against three encrypted 
 
 See the [common contract and HDFC guide](docs/hdfc-parser.md) and [SBI/YES Bank validation guide](docs/parser-validation.md). Implementation tracking remains in [Linear](https://linear.app/furquan/project/hisaab-f672b4a38a9f).
 
+## Private database connection
+
+The app has private connection configuration plus an approved five-entity
+SQLAlchemy model and an initial Alembic migration. See the [ER diagram and
+schema/migration guide](docs/schema/README.md). The hosted schema has not been
+migrated yet. Ordinary parsing and db-check never create tables or import data.
+
+Create `config.local.toml` at the repository root using `config.example.toml`
+as the template, without overwriting an existing private configuration. Make the
+private file owner-only before entering credentials:
+
+```sh
+chmod 600 config.local.toml
+```
+
+Copy the separate fields from Supabase's **Connect** dialog into the
+`[database]` section: `host`, integer `port`, `database`, `user`, and `pass`.
+Quote every string, including `pass`; use the literal password without URL
+encoding. The port defaults to 5432. Keep `sslmode = 'require'` unless you have
+configured stronger certificate verification. Follow `config.example.toml`.
+
+Alternatively, use `database.url` instead of the separate fields. In URL form,
+reserved password characters must be percent-encoded. A blank `url` is ignored
+when separate fields are supplied; a nonempty URL mixed with fields is rejected
+as ambiguous. Never paste credentials into chat, command arguments, Git, or
+logs. The private file is explicitly Git-ignored; the example has no real secrets.
+
+The app reads that same private file using Python's standard `tomllib`.
+Its default path is relative to the project, not the current working directory.
+
+```sh
+uv sync
+uv run python -m core db-check
+```
+
+The check executes `SELECT 1`, closes the connection, and prints only a JSON
+success or sanitized error. It returns 0 for success, 1 for configuration or
+connection failure, 2 for invalid arguments, and 130 for cancellation.
+An empty configuration deliberately fails without opening a network connection.
+The optional `db-check --config PATH` selects another private TOML file inside
+the project directory. Paths escaping that directory (including symlink escapes)
+and nonregular files are rejected before reading. Custom files are not
+automatically Git-ignored; keep them under `data/` or add an explicit exclusion.
+
+SQLAlchemy **2.1.5** supplies the database boundary, with Psycopg **3.3.6** for
+PostgreSQL. Standard `postgresql://` and `postgres://` URIs are normalized to
+the Psycopg driver. PostgreSQL connections default to `sslmode=require`;
+`verify-ca` and `verify-full` are preserved when explicitly configured.
+Requiring TLS encrypts transport but is not the hostname verification of
+`verify-full`. Connection attempts default to a 10-second driver timeout per
+host/address, not a strict overall deadline.
+
+Supabase's direct host generally needs IPv6 unless an IPv4 option is enabled.
+If it is unreachable from your network, copy the **session pooler** URI from the
+same Connect dialog instead. Automatic prepared statements are disabled for
+compatibility with transaction pooling too.
+
+**Security boundary:** direct credentials authenticate a database role, not a
+Hisaab user. A privileged role can bypass row-level security. This is a trusted
+single-user local app, not proof of authenticated owner isolation. Do not
+distribute these credentials to another user. The TOML file contains plaintext
+secrets; permissions and Git exclusions are not encryption.
+
+Future SQL backends require the appropriate driver, migrations, and tests;
+SQLAlchemy does not make authentication or every schema portable automatically.
+No interim SQLite persistence is introduced; an in-memory SQLite test exercises
+the generic connection check without a network or file database.
+
+Schema tests use a disposable local PostgreSQL database and never the private
+application connection. The [schema guide](docs/schema/README.md) documents
+migration/constraint tests and CI. Application connectivity tests do not contact
+your hosted database unless explicitly enabled:
+
+```sh
+uv run python -m unittest tests.test_config tests.test_database -v
+HISAAB_DB_TESTS=1 uv run python -m unittest tests.test_database.LiveConnectionTests -v
+```
+
+Sources: [SQLAlchemy engines](https://docs.sqlalchemy.org/en/21/core/engines.html),
+[Psycopg dialect](https://docs.sqlalchemy.org/en/21/dialects/postgresql.html#module-sqlalchemy.dialects.postgresql.psycopg),
+[Supabase connections](https://supabase.com/docs/guides/database/connecting-to-postgres),
+and [Python TOML parsing](https://docs.python.org/3/library/tomllib.html).
+
 ## Local statement extraction experiment
 
 This experiment evaluates **pdfplumber 0.11.10** against the four sample PDFs. It is not yet a bank-specific parser: extracted table candidates are not validated transaction rows.
@@ -60,7 +143,7 @@ uv run python scripts/probe_statements.py data/sbi_card_statement.pdf
 
 Results go into a fresh `data/probes/run-*/` directory. Each PDF produces JSON containing page text, positioned words, and table candidates using both line-based and text-alignment strategies. The terminal displays only counts and output paths. Incorrect passwords and extraction failures are reported without raw document errors; other PDFs are still attempted. A failed input produces a nonzero exit status. Rerun the command to retry.
 
-**Privacy:** `data/` is ignored by Git. New run directories are owner-only (0700), and result files are owner-readable/writable (0600). JSON files contain **unencrypted financial data**; file permissions are not encryption. Keep them local and delete experiment results when finished. No decrypted PDF is written, and no document is uploaded. The app's planned 24-month retention policy is not implemented by this probe.
+**Privacy:** `data/` is ignored by Git. New run directories are owner-only (0700), and result files are owner-readable/writable (0600). JSON files contain **unencrypted financial data**; file permissions are not encryption. Keep them local and delete experiment results when finished. No decrypted PDF is written, and no document is uploaded. Configurable PDF retention and cleanup are not implemented by this probe.
 
 ### Automated tests
 

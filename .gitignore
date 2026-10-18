@@ -3,6 +3,7 @@
 .env
 .env.*
 /credit_card_cred.env
+/config.local.toml
 !.env.example
 
 # Local Python environment
