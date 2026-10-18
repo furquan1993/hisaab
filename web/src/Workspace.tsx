@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { readPage, type BrowserClient } from "./client";
 import { demoEntries } from "./demo";
 import { filterEntries, formatAmount, type Entry, type View } from "./domain";
@@ -25,6 +25,7 @@ export default function Workspace({
   const [error, setError] = useState(""),
     [selected, setSelected] = useState<Entry | null>(null);
   const [refresh, setRefresh] = useState(0);
+  const evidenceTrigger = useRef<HTMLButtonElement | null>(null);
   const invalid = !start || !end || start > end;
   useEffect(() => {
     const controller = new AbortController();
@@ -269,7 +270,16 @@ export default function Workspace({
                         <button
                           className="evidence-link"
                           aria-label="View evidence"
-                          onClick={() => setSelected(row)}
+                          aria-expanded={selected?.id === row.id}
+                          aria-controls={
+                            selected?.id === row.id
+                              ? "source-evidence"
+                              : undefined
+                          }
+                          onClick={(event) => {
+                            evidenceTrigger.current = event.currentTarget;
+                            setSelected({ ...row });
+                          }}
                         >
                           View ↗
                         </button>
@@ -329,7 +339,10 @@ export default function Workspace({
               key={selected.id}
               row={selected}
               api={api}
-              onClose={() => setSelected(null)}
+              onClose={() => {
+                setSelected(null);
+                evidenceTrigger.current?.focus();
+              }}
             />
           )}
         </section>
