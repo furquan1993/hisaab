@@ -26,6 +26,25 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from core.persistence.base import SCHEMA, Base, CreatedAt, Identity, Owned
+from core.persistence.decisions import (
+    Category,
+    DecisionEvent,
+    EntryDecision,
+    FundingAccount,
+)
+
+__all__ = [
+    "Base",
+    "Card",
+    "Category",
+    "DecisionEvent",
+    "Entry",
+    "EntryDecision",
+    "FundingAccount",
+    "ImportRecord",
+    "Owner",
+    "Statement",
+]
 
 
 class Owner(Identity, CreatedAt, Base):
@@ -161,6 +180,7 @@ class Entry(Identity, Owned, Base):
     __tablename__ = "entries"
     __table_args__ = (
         UniqueConstraint("import_id", "sequence", name="uq_entries_import_sequence"),
+        UniqueConstraint("owner_id", "id", name="uq_entries_owner_id"),
         ForeignKeyConstraint(
             ["owner_id", "import_id"],
             [f"{SCHEMA}.imports.owner_id", f"{SCHEMA}.imports.id"],

@@ -123,7 +123,7 @@ class ImportRecoveryTests(ImportTestsBase):
                     .scalars()
                     .all()
                 )
-                self.assertEqual(flags, [True] * 5)
+                self.assertEqual(flags, [True] * len(Base.metadata.tables))
         finally:
             if restored is not None:
                 restored.dispose()

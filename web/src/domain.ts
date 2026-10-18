@@ -26,6 +26,12 @@ export const entrySchema = z.object({
   entry_issues: z.array(z.object({ code: z.string() }).passthrough()),
   import_issues: z.array(z.object({ code: z.string() }).passthrough()),
   review_status: z.string(),
+  logical_entry_id: z.string().optional(),
+  decision_version: z.number().int().nonnegative().default(0),
+  category_id: z.string().nullable().default(null),
+  category_name: z.string().nullable().default(null),
+  account_id: z.string().nullable().default(null),
+  account_name: z.string().nullable().default(null),
 });
 export type Entry = z.infer<typeof entrySchema>;
 export type View = "statement" | "transaction" | "review";

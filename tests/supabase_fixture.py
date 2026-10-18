@@ -143,6 +143,22 @@ class SupabaseTests(unittest.TestCase):
     def cleanup_records(cls):
         if cls.owners:
             with cls.engine.begin() as connection:
+                for name in (
+                    "decision_events",
+                    "entry_decisions",
+                    "import_reviews",
+                    "entry_links",
+                    "parser_revisions",
+                    "categories",
+                    "accounts",
+                ):
+                    if connection.scalar(
+                        text("SELECT to_regclass(:name)"), {"name": "hisaab." + name}
+                    ):
+                        connection.exec_driver_sql(
+                            "DELETE FROM hisaab." + name + " WHERE owner_id=ANY(%s)",
+                            (cls.owners,),
+                        )
                 connection.execute(delete(Entry).where(Entry.owner_id.in_(cls.owners)))
                 connection.execute(
                     update(Statement)

@@ -3,6 +3,9 @@ import { readPage, type BrowserClient } from "./client";
 import { demoEntries } from "./demo";
 import { filterEntries, formatAmount, type Entry, type View } from "./domain";
 import Evidence from "./Evidence";
+import Labels from "./Labels";
+import { useLabels } from "./useLabels";
+import AssignmentEditor, { type AssignmentPatch } from "./AssignmentEditor";
 
 export default function Workspace({
   api,
@@ -15,6 +18,17 @@ export default function Workspace({
   initialRange: readonly [string, string];
   onExit: () => void;
 }) {
+  const [section, setSection] = useState<"statements" | "account" | "category">(
+    "statements",
+  );
+  const labelStore = useLabels(api);
+  const [demoRows, setDemoRows] = useState(() =>
+    demoEntries.map((row) => ({ ...row })),
+  );
+  const [editing, setEditing] = useState<Entry | null>(null);
+  const [notice, setNotice] = useState("");
+  const editTrigger = useRef<HTMLButtonElement | null>(null);
+  const ledgerHeading = useRef<HTMLHeadingElement | null>(null);
   const [view, setView] = useState<View>("statement");
   const [start, setStart] = useState(initialRange[0]),
     [end, setEnd] = useState(initialRange[1]);
@@ -37,7 +51,7 @@ export default function Workspace({
       setLoading(false);
       return;
     }
-    const filtered = filterEntries(demoEntries, view, start, end);
+    const filtered = filterEntries(demoRows, view, start, end);
     const promise = api
       ? readPage(api, view, start, end, offset, controller.signal)
       : Promise.resolve({
@@ -61,7 +75,44 @@ export default function Workspace({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [api, view, start, end, offset, invalid, refresh]);
+  }, [api, view, start, end, offset, invalid, refresh, demoRows]);
+  async function saveAssignments(patch: AssignmentPatch) {
+    if (!editing) return;
+    if (api) {
+      const { error } = await api.rpc("save_entry_decision", {
+        p_entry_id: editing.id,
+        p_expected_version: editing.decision_version,
+        p_patch: patch,
+      });
+      if (error)
+        throw new Error(
+          error.code === "PT409"
+            ? "This entry changed. Cancel, refresh, and review the latest values before saving. Your draft has not overwritten them."
+            : "Could not confirm the save. Reload before retrying.",
+        );
+      setRefresh((n) => n + 1);
+    } else {
+      setDemoRows((current) =>
+        current.map((row) =>
+          row.id === editing.id
+            ? { ...row, ...patch, decision_version: row.decision_version + 1 }
+            : row,
+        ),
+      );
+    }
+    setEditing(null);
+    setNotice(
+      "Assignments saved. Source facts and review issues are unchanged.",
+    );
+    ledgerHeading.current?.focus();
+  }
+  function labelName(id: string | null, fallback: string | null) {
+    return (
+      labelStore.labels.find((label) => label.id === id)?.name ??
+      fallback ??
+      "Unassigned"
+    );
+  }
   function changeView(next: View) {
     setView(next);
     setOffset(0);
@@ -81,9 +132,27 @@ export default function Workspace({
           <span className="brand-dot">●</span>
         </a>
         <p className="nav-caption">WORKSPACE</p>
-        <div className="nav-active">
-          <span>▤</span> Statements <span className="nav-dot">●</span>
-        </div>
+        {(
+          [
+            ["statements", "Statements"],
+            ["account", "Accounts"],
+            ["category", "Categories"],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            type="button"
+            key={value}
+            className={"nav-item " + (section === value ? "nav-active" : "")}
+            aria-current={section === value ? "page" : undefined}
+            onClick={() => {
+              setSection(value);
+              setSelected(null);
+              setEditing(null);
+            }}
+          >
+            {label}
+          </button>
+        ))}
         <div className="sidebar-note">
           <span className="status-dot" /> Evidence preserved
           <p>
@@ -102,250 +171,312 @@ export default function Workspace({
         <header className="topbar">
           <span>
             Workspace <span className="crumb">/</span>{" "}
-            <strong>Statements</strong>
+            <strong>
+              {section === "statements"
+                ? "Statements"
+                : section === "account"
+                  ? "Accounts"
+                  : "Categories"}
+            </strong>
           </span>
           <button className="quiet" onClick={onExit}>
             {api ? "Sign out" : "Exit demo"}
           </button>
         </header>
-        <section className="page">
-          <div className="page-heading">
-            <div>
-              <span className="eyebrow">YOUR MONTH, IN FOCUS</span>
-              <h1>
-                All your cards.
-                <br />
-                <span>One clear picture.</span>
-              </h1>
-              <p>
-                Explore every entry, keep its evidence, and see what needs a
-                closer look.
-              </p>
-            </div>
-            <div className="read-only">
-              <span className="status-dot" /> READ-ONLY PREVIEW
-            </div>
-          </div>
-          {!api && (
-            <div className="demo-notice">
-              <strong>Synthetic demo</strong> • All names, amounts and documents
-              below are invented. No financial data is loaded.
-            </div>
-          )}
-          <div className="metrics">
-            <div>
-              <span>Matching entries</span>
-              <strong>{loading ? "…" : total}</strong>
-              <small>
-                {view === "review"
-                  ? "Across all dates"
-                  : "In the selected range"}
-              </small>
-            </div>
-            <div>
-              <span>Cards on this page</span>
-              <strong>{new Set(rows.map((r) => r.card_label)).size}</strong>
-              <small>Combined, with provenance</small>
-            </div>
-            <div>
-              <span>Flagged on this page</span>
-              <strong>{rows.filter((r) => r.needs_review).length}</strong>
-              <small>Issues, unknown dates or candidates</small>
-            </div>
-          </div>
-          <section className="ledger" aria-label="Statement entries">
-            <div className="ledger-heading">
+        {section !== "statements" ? (
+          <Labels
+            key={section}
+            kind={section}
+            {...labelStore}
+            onSave={labelStore.save}
+            onReload={labelStore.reload}
+          />
+        ) : (
+          <section className="page">
+            <div className="page-heading">
               <div>
-                <h2>Statement entries</h2>
-                <p>Every row kept. Nothing silently combined.</p>
+                <span className="eyebrow">YOUR MONTH, IN FOCUS</span>
+                <h1>
+                  All your cards.
+                  <br />
+                  <span>One clear picture.</span>
+                </h1>
+                <p>
+                  Explore every entry, keep its evidence, and see what needs a
+                  closer look.
+                </p>
               </div>
-              <button
-                onClick={() => setRefresh((n) => n + 1)}
-                disabled={loading}
-              >
-                ↻ Refresh
-              </button>
-            </div>
-            <div className="toolbar">
-              <div role="tablist" aria-label="Date view">
-                {(
-                  [
-                    ["statement", "Statement date"],
-                    ["transaction", "Transaction date"],
-                    ["review", "Needs review"],
-                  ] as const
-                ).map(([mode, label]) => (
-                  <button
-                    role="tab"
-                    aria-selected={view === mode}
-                    key={mode}
-                    className={view === mode ? "active" : ""}
-                    onClick={() => changeView(mode)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div className="date-range">
-                <label>
-                  From
-                  <input
-                    type="date"
-                    value={start}
-                    disabled={view === "review"}
-                    onChange={(e) => changeRange(e.target.value, true)}
-                  />
-                </label>
-                <span>→</span>
-                <label>
-                  To
-                  <input
-                    type="date"
-                    value={end}
-                    disabled={view === "review"}
-                    onChange={(e) => changeRange(e.target.value, false)}
-                  />
-                </label>
+              <div className="read-only">
+                <span className="status-dot" />{" "}
+                {api ? "PRIVATE WORKSPACE" : "INTERACTIVE DEMO"}
               </div>
             </div>
-            <p className="view-help">
-              {view === "statement"
-                ? "Includes all entries from bills dated within this range, even transactions outside it."
-                : view === "transaction"
-                  ? "Includes selected-source entries whose printed transaction dates fall within this range."
-                  : "All-date review queue: unresolved issues, unknown dates and unselected candidate imports. Candidates are excluded from normal views."}
-            </p>
-            {invalid && view !== "review" && (
-              <p role="alert" className="error">
-                Choose a valid start and end date.
-              </p>
+            {!api && (
+              <div className="demo-notice">
+                <strong>Synthetic demo</strong> • All names, amounts and
+                documents below are invented. No financial data is loaded.
+              </div>
             )}
-            {error && (
-              <p role="alert" className="error">
-                {error}
-              </p>
-            )}
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Transaction</th>
-                    <th>Card & statement</th>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th className="amount">Amount</th>
-                    <th>Evidence</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.id}>
-                      <td>
-                        <strong>{row.description}</strong>
-                        <small>
-                          {row.needs_review
-                            ? "● Needs review"
-                            : "Selected source"}
-                          {!row.is_selected && " · Candidate"}
-                        </small>
-                      </td>
-                      <td>
-                        <strong className="card-label">{row.card_label}</strong>
-                        <small>
-                          {row.statement_date ?? "Statement date unknown"}
-                        </small>
-                      </td>
-                      <td className={!row.transaction_date ? "unknown" : ""}>
-                        {row.transaction_date ?? "Date unknown"}
-                      </td>
-                      <td>
-                        <span className={`type ${row.entry_type}`}>
-                          {row.entry_type}
-                        </span>
-                      </td>
-                      <td className={`amount ${row.direction ?? "unknown"}`}>
-                        {formatAmount(row.amount, row.currency, row.direction)}
-                      </td>
-                      <td>
-                        <button
-                          className="evidence-link"
-                          aria-label="View evidence"
-                          aria-expanded={selected?.id === row.id}
-                          aria-controls={
-                            selected?.id === row.id
-                              ? "source-evidence"
-                              : undefined
-                          }
-                          onClick={(event) => {
-                            evidenceTrigger.current = event.currentTarget;
-                            setSelected({ ...row });
-                          }}
-                        >
-                          View ↗
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {!loading && !error && rows.length === 0 && (
-                <div className="empty">
-                  <h3>No matching entries</h3>
-                  <p>
-                    Try another date range or check Needs review for undated
-                    entries and candidates.
-                  </p>
+            <div className="metrics">
+              <div>
+                <span>Matching entries</span>
+                <strong>{loading ? "…" : total}</strong>
+                <small>
+                  {view === "review"
+                    ? "Across all dates"
+                    : "In the selected range"}
+                </small>
+              </div>
+              <div>
+                <span>Cards on this page</span>
+                <strong>{new Set(rows.map((r) => r.card_label)).size}</strong>
+                <small>Combined, with provenance</small>
+              </div>
+              <div>
+                <span>Flagged on this page</span>
+                <strong>{rows.filter((r) => r.needs_review).length}</strong>
+                <small>Issues, unknown dates or candidates</small>
+              </div>
+            </div>
+            <section className="ledger" aria-label="Statement entries">
+              <div className="ledger-heading">
+                <div>
+                  <h2 ref={ledgerHeading} tabIndex={-1}>
+                    Statement entries
+                  </h2>
+                  <p>Every row kept. Nothing silently combined.</p>
                 </div>
-              )}
-              {loading && (
-                <p className="empty" role="status">
-                  Loading your entries…
+                <button
+                  onClick={() => setRefresh((n) => n + 1)}
+                  disabled={loading}
+                >
+                  ↻ Refresh
+                </button>
+              </div>
+              <div className="toolbar">
+                <div role="tablist" aria-label="Date view">
+                  {(
+                    [
+                      ["statement", "Statement date"],
+                      ["transaction", "Transaction date"],
+                      ["review", "Needs review"],
+                    ] as const
+                  ).map(([mode, label]) => (
+                    <button
+                      role="tab"
+                      aria-selected={view === mode}
+                      key={mode}
+                      className={view === mode ? "active" : ""}
+                      onClick={() => changeView(mode)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="date-range">
+                  <label>
+                    From
+                    <input
+                      type="date"
+                      value={start}
+                      disabled={view === "review"}
+                      onChange={(e) => changeRange(e.target.value, true)}
+                    />
+                  </label>
+                  <span>→</span>
+                  <label>
+                    To
+                    <input
+                      type="date"
+                      value={end}
+                      disabled={view === "review"}
+                      onChange={(e) => changeRange(e.target.value, false)}
+                    />
+                  </label>
+                </div>
+              </div>
+              <p className="view-help">
+                {view === "statement"
+                  ? "Includes all entries from bills dated within this range, even transactions outside it."
+                  : view === "transaction"
+                    ? "Includes selected-source entries whose printed transaction dates fall within this range."
+                    : "All-date review queue: unresolved issues, unknown dates and unselected candidate imports. Candidates are excluded from normal views."}
+              </p>
+              {invalid && view !== "review" && (
+                <p role="alert" className="error">
+                  Choose a valid start and end date.
                 </p>
               )}
-            </div>
-            <footer className="table-footer">
-              <span>
-                {total ? offset + 1 : 0}–{Math.min(offset + rows.length, total)}{" "}
-                of {total} entries
-              </span>
-              <div>
-                <button
-                  disabled={loading || offset === 0}
-                  onClick={() => {
-                    setOffset((n) => n - 50);
-                    setSelected(null);
-                  }}
-                >
-                  Previous
-                </button>
-                <button
-                  disabled={loading || offset + 50 >= total}
-                  onClick={() => {
-                    setOffset((n) => n + 50);
-                    setSelected(null);
-                  }}
-                >
-                  Next
-                </button>
+              {error && (
+                <p role="alert" className="error">
+                  {error}
+                </p>
+              )}
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Transaction</th>
+                      <th>Card & statement</th>
+                      <th>Date</th>
+                      <th>Type</th>
+                      <th>Account</th>
+                      <th>Category</th>
+                      <th className="amount">Amount</th>
+                      <th>Evidence</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => (
+                      <tr key={row.id}>
+                        <td>
+                          <strong>{row.description}</strong>
+                          <small>
+                            {row.needs_review
+                              ? "● Needs review"
+                              : "Selected source"}
+                            {!row.is_selected && " · Candidate"}
+                          </small>
+                        </td>
+                        <td>
+                          <strong className="card-label">
+                            {row.card_label}
+                          </strong>
+                          <small>
+                            {row.statement_date ?? "Statement date unknown"}
+                          </small>
+                        </td>
+                        <td className={!row.transaction_date ? "unknown" : ""}>
+                          {row.transaction_date ?? "Date unknown"}
+                        </td>
+                        <td>
+                          <span className={`type ${row.entry_type}`}>
+                            {row.entry_type}
+                          </span>
+                        </td>
+                        <td>{labelName(row.account_id, row.account_name)}</td>
+                        <td>{labelName(row.category_id, row.category_name)}</td>
+                        <td className={`amount ${row.direction ?? "unknown"}`}>
+                          {formatAmount(
+                            row.amount,
+                            row.currency,
+                            row.direction,
+                          )}
+                        </td>
+                        <td>
+                          <button
+                            className="evidence-link"
+                            aria-label="View evidence"
+                            aria-expanded={selected?.id === row.id}
+                            aria-controls={
+                              selected?.id === row.id
+                                ? "source-evidence"
+                                : undefined
+                            }
+                            onClick={(event) => {
+                              evidenceTrigger.current = event.currentTarget;
+                              setSelected({ ...row });
+                            }}
+                          >
+                            View ↗
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Edit entry"
+                            disabled={
+                              !row.is_selected ||
+                              labelStore.loading ||
+                              !!labelStore.error
+                            }
+                            onClick={(event) => {
+                              editTrigger.current = event.currentTarget;
+                              setEditing({ ...row });
+                            }}
+                          >
+                            Edit
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {!loading && !error && rows.length === 0 && (
+                  <div className="empty">
+                    <h3>No matching entries</h3>
+                    <p>
+                      Try another date range or check Needs review for undated
+                      entries and candidates.
+                    </p>
+                  </div>
+                )}
+                {loading && (
+                  <p className="empty" role="status">
+                    Loading your entries…
+                  </p>
+                )}
               </div>
-            </footer>
+              <footer className="table-footer">
+                <span>
+                  {total ? offset + 1 : 0}–
+                  {Math.min(offset + rows.length, total)} of {total} entries
+                </span>
+                <div>
+                  <button
+                    disabled={loading || offset === 0}
+                    onClick={() => {
+                      setOffset((n) => n - 50);
+                      setSelected(null);
+                    }}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    disabled={loading || offset + 50 >= total}
+                    onClick={() => {
+                      setOffset((n) => n + 50);
+                      setSelected(null);
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </footer>
+            </section>
+            <p className="page-foot">
+              <span className="status-dot" /> Source facts are immutable.
+              Accounts and Categories are independent. Assignments do not
+              resolve source issues.
+            </p>
+            {notice && (
+              <p role="status" className="demo-notice">
+                {notice}
+              </p>
+            )}
+            {editing && (
+              <AssignmentEditor
+                key={editing.id}
+                row={editing}
+                labels={labelStore.labels}
+                onSave={saveAssignments}
+                onClose={() => {
+                  setEditing(null);
+                  editTrigger.current?.focus();
+                }}
+              />
+            )}
+            {selected && (
+              <Evidence
+                key={selected.id}
+                row={selected}
+                api={api}
+                onClose={() => {
+                  setSelected(null);
+                  evidenceTrigger.current?.focus();
+                }}
+              />
+            )}
           </section>
-          <p className="page-foot">
-            <span className="status-dot" /> Source facts are immutable.
-            Accounts, categories and review editing are the next milestone.
-          </p>
-          {selected && (
-            <Evidence
-              key={selected.id}
-              row={selected}
-              api={api}
-              onClose={() => {
-                setSelected(null);
-                evidenceTrigger.current?.focus();
-              }}
-            />
-          )}
-        </section>
+        )}
       </main>
     </div>
   );

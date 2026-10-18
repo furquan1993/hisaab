@@ -29,6 +29,23 @@ try {
     .waitFor();
   await page.getByRole("button", { name: "Close evidence" }).click();
   await expect(evidenceTrigger).toBeFocused();
+  await page.getByRole("button",{name:"Accounts",exact:true}).click();
+  await page.getByLabel("Account name").fill("Synthetic browser pot");
+  await page.getByRole("button",{name:"Create Account",exact:true}).click();
+  await page.getByRole("button",{name:"Edit Synthetic browser pot"}).waitFor();
+  await page.getByRole("button",{name:"Categories",exact:true}).click();
+  await page.getByLabel("Category name").fill("Synthetic browser category");
+  await page.getByRole("button",{name:"Create Category",exact:true}).click();
+  await page.getByRole("button",{name:"Edit Synthetic browser category"}).waitFor();
+  await page.getByRole("button",{name:"Statements",exact:true}).click();
+  await page.getByRole("button",{name:"Edit entry",exact:true}).click();
+  await page.getByLabel("Account",{exact:true}).selectOption({label:"Synthetic browser pot"});
+  await page.getByLabel("Category",{exact:true}).selectOption({label:"Synthetic browser category"});
+  await page.getByRole("button",{name:"Save assignments",exact:true}).click();
+  await expect(page.getByRole("cell",{name:"Synthetic browser pot",exact:true})).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("cell",{name:"Synthetic browser pot",exact:true})).toBeVisible();
+  await expect(page.getByRole("cell",{name:"Synthetic browser category",exact:true})).toBeVisible();
   await page.getByRole("tab", { name: "Transaction date" }).click();
   await page.getByText("SYNTHETIC SHOP", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
@@ -37,7 +54,7 @@ try {
     throw Error("Private row survived sign-out");
   if (failures.length) throw Error("Browser encountered an uncaught error");
   console.log(
-    "Real Auth browser smoke passed: login, reload, evidence, date view, logout.",
+    "Real Auth browser smoke passed: login, evidence, independent assignments, persisted reload, date view, logout.",
   );
 } finally {
   await browser.close();

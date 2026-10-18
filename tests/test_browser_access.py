@@ -6,6 +6,7 @@ from uuid import uuid4
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import DBAPIError
 
+from core.persistence.models import Base
 from tests.persistence_fixture import seed
 from tests.postgres_fixture import PostgresTests
 
@@ -53,7 +54,7 @@ class BrowserAccessTests(PostgresTests):
             self.connection.scalar(text("SELECT hisaab.current_owner_id()"))
         )
 
-    def test_all_five_tables_have_only_read_policies(self):
+    def test_all_evidence_and_decision_tables_have_only_read_policies(self):
         policies = self.connection.execute(
             text(
                 "SELECT tablename, cmd FROM pg_policies WHERE schemaname='hisaab' ORDER BY tablename"
@@ -63,6 +64,8 @@ class BrowserAccessTests(PostgresTests):
             policies,
             [
                 (name, "SELECT")
-                for name in ("cards", "entries", "imports", "owners", "statements")
+                for name in sorted(
+                    table.name for table in Base.metadata.tables.values()
+                )
             ],
         )
