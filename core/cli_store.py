@@ -14,10 +14,12 @@ from core.imports import import_pdf
 from core.persistence.import_records import list_imports, read_original
 from core.persistence.store import (
     StoreError,
+    link_owner_auth,
     list_cards,
     list_owners,
     register_card,
     register_owner,
+    unlink_owner_auth,
 )
 from core.private_files import export_file
 
@@ -32,6 +34,13 @@ def add_arguments(subparsers):
         "owner-create", "Register a data owner, not an authenticated login."
     )
     owner.add_argument("name")
+    linked = command(
+        "owner-auth-link", "Privately link an existing owner to a verified Auth user."
+    )
+    linked.add_argument("owner", type=UUID)
+    linked.add_argument("auth_user", type=UUID)
+    unlinked = command("owner-auth-unlink", "Revoke the owner's browser data access.")
+    unlinked.add_argument("owner", type=UUID)
     owners = command("owners-list", "List registered data owners.")
     card = command("card-create", "Register a card for an explicit owner.")
     card.add_argument("--owner", type=UUID, required=True)
@@ -106,6 +115,17 @@ def _owner(engine, args, emit):
     return 0
 
 
+def _auth_link(engine, args, emit):
+    if args.command == "owner-auth-link":
+        link_owner_auth(engine, args.owner, args.auth_user)
+        status = "auth_linked"
+    else:
+        unlink_owner_auth(engine, args.owner)
+        status = "auth_unlinked"
+    emit({"status": status, "owner_id": str(args.owner)})
+    return 0
+
+
 def _card(engine, args, emit):
     card = register_card(
         engine, args.owner, bank=args.bank, label=args.label, last_four=args.last_four
@@ -173,6 +193,8 @@ def _backup(engine, args, emit):
 
 HANDLERS = {
     "owner-create": _owner,
+    "owner-auth-link": _auth_link,
+    "owner-auth-unlink": _auth_link,
     "owners-list": _list,
     "card-create": _card,
     "cards-list": _list,

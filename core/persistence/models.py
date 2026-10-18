@@ -31,6 +31,9 @@ from core.persistence.base import SCHEMA, Base, CreatedAt, Identity, Owned
 class Owner(Identity, CreatedAt, Base):
     __tablename__ = "owners"
     display_name: Mapped[str] = mapped_column(Text, nullable=False)
+    __table_args__ = (UniqueConstraint("auth_user_id", name="uq_owners_auth_user_id"),)
+    # Optional provider subject, not the financial Owner ID or an auth-schema FK.
+    auth_user_id: Mapped[UUID | None]
     cards: Mapped[list["Card"]] = relationship(viewonly=True, lazy="raise")
 
 

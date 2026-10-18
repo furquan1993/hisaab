@@ -1,0 +1,42 @@
+# Disposable Auth/PostgREST tests only. Alembic owns the application schema.
+# https://supabase.com/docs/guides/local-development/cli/config
+project_id = "hisaab-test"
+[api]
+enabled = true
+port = 54321
+# The test runner adds hisaab_api only after Alembic creates it.
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 200
+auto_expose_new_tables = false
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+[db.seed]
+enabled = false
+[studio]
+enabled = false
+[realtime]
+enabled = false
+[storage]
+enabled = false
+[storage.vector]
+enabled = false
+[local_smtp]
+enabled = false
+[auth]
+enabled = true
+site_url = "http://localhost:5173/hisaab/"
+additional_redirect_urls = []
+enable_signup = false
+enable_anonymous_sign_ins = false
+minimum_password_length = 12
+# Keep the email provider enabled for password login. Global signup stays off.
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+[edge_runtime]
+enabled = false
+[analytics]
+enabled = false

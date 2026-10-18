@@ -81,7 +81,7 @@ on all five tables without end-user policies. PostgreSQL therefore denies
 ordinary non-owner roles by default. This is defense in depth, not a completed
 per-user login/authorization design. The database-owner/superuser connection
 can bypass RLS and is appropriate only for the trusted single-user local app.
-Do not share that credential or enable a second application user yet.
+Do not share that credential. Revisions 0002/0003 add an optional unique Auth subject on Owner and a separate read-only API namespace; see the [browser access guide](../browser-workspace.md). Their two-user Auth tests use synthetic users only. Hosted rollout and a second real user remain separate approvals.
 
 ## Migration workflow
 
@@ -109,8 +109,10 @@ uv run alembic upgrade head
 uv run alembic check
 ```
 
-Upgrade creates only the private app schema, its five tables/constraints/RLS,
-and the Alembic metadata ledger. It does not alter Supabase Auth/Storage tables
+The initial upgrade creates the private app schema, its five tables/constraints/RLS,
+and the Alembic metadata ledger. Later browser revisions add read policies,
+minimal grants, an optional Auth subject and the hisaab_api views/functions,
+including protection against browser changes to the migration ledger. It does not alter Supabase Auth/Storage tables
 or import financial records. Creation fails rather than silently adopting a
 pre-existing private schema. Alembic autogeneration is a draft: review every
 revision, especially constraint ordering and security operations. The initial

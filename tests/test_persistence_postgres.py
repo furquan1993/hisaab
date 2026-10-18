@@ -206,6 +206,13 @@ class PersistencePostgresTests(PostgresTests):
         self.connection.execute(
             text("GRANT SELECT ON ALL TABLES IN SCHEMA hisaab TO hisaab_schema_probe")
         )
+        # Even a caller permitted to evaluate the policy has no rows without a
+        # verified, mapped identity; other roles cannot execute the helper at all.
+        self.connection.execute(
+            text(
+                "GRANT EXECUTE ON FUNCTION hisaab.current_owner_id() TO hisaab_schema_probe"
+            )
+        )
         self.connection.execute(text("SET LOCAL ROLE hisaab_schema_probe"))
         try:
             count = self.connection.scalar(text("SELECT count(*) FROM hisaab.entries"))

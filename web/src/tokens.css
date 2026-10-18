@@ -1,0 +1,6 @@
+/* No remote fonts, analytics or third-party assets. */
+:root {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
