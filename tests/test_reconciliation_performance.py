@@ -12,6 +12,12 @@ from tests.test_reconciliation_http import ReconciliationFixture
 
 
 class ReconciliationPerformanceTests(ReconciliationFixture):
+    def test_included_entries_do_not_expand_reviewed_evidence_twice(self):
+        with self.engine.connect() as connection:
+            definition = connection.scalar(text("SELECT pg_get_viewdef('hisaab_api.funding_entries'::regclass,true)"))
+        self.assertNotIn("funding_rows", definition)
+        self.assertIn("is_selected", definition)
+
     def test_expensive_evidence_is_materialized_before_account_joins(self):
         with self.engine.connect() as connection:
             for view in ("hisaab.funding_obligations", "hisaab.funding_balances"):

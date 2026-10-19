@@ -20,10 +20,12 @@ function Breakdown({
   title,
   currency,
   buckets,
+  onBucket,
 }: {
   title: string;
   currency: string;
   buckets: Map<string, SpendBucket>;
+  onBucket?: (id: string) => void;
 }) {
   return (
     <section className="ledger summary-breakdown">
@@ -42,7 +44,20 @@ function Breakdown({
           <tbody>
             {sortedBuckets(buckets).map((bucket) => (
               <tr key={bucket.id}>
-                <th scope="row">{bucket.name}</th>
+                <th scope="row">
+                  {onBucket ? (
+                    <button
+                      type="button"
+                      className="summary-category-link"
+                      onClick={() => onBucket(bucket.id)}
+                      aria-label={`Explore ${bucket.name} spending`}
+                    >
+                      {bucket.name}
+                    </button>
+                  ) : (
+                    bucket.name
+                  )}
+                </th>
                 <td>{bucket.count}</td>
                 <td>{money(bucket.charges - bucket.credits, currency)}</td>
               </tr>
@@ -63,6 +78,7 @@ export default function Summary({
   onEntries,
   onImports,
   onReconciliation,
+  onSpending,
 }: {
   api: BrowserClient | null;
   month: string;
@@ -72,6 +88,7 @@ export default function Summary({
   onEntries: (basis: SummaryBasis) => void;
   onImports: () => void;
   onReconciliation: () => void;
+  onSpending?: (categoryId: string, period: string, currency: string) => void;
 }) {
   const [basis, setBasis] = useState<SummaryBasis>("statement");
   const [refresh, setRefresh] = useState(0);
@@ -330,6 +347,16 @@ export default function Summary({
                   title="By category"
                   currency={currency.id}
                   buckets={currency.categories}
+                  onBucket={
+                    onSpending
+                      ? (id) =>
+                          onSpending(
+                            id,
+                            basis === "transaction" ? month : "all",
+                            currency.id,
+                          )
+                      : undefined
+                  }
                 />
                 <Breakdown
                   title="By budget account"

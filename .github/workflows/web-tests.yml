@@ -38,7 +38,7 @@ jobs:
           HISAAB_BROWSER_TESTS: "1"
         run: |
           export HISAAB_SUPABASE_STATUS_FILE="${RUNNER_TEMP}/supabase-status.json"
-          uv run --locked --no-build python -m unittest tests.test_browser_http tests.test_decisions_http tests.test_review tests.test_revision_http tests.test_reconciliation_http tests.test_reconciliation_performance tests.test_settlements_http tests.test_browser_e2e tests.test_funding_e2e -v
+          uv run --locked --no-build python -m unittest tests.test_browser_http tests.test_decisions_http tests.test_review tests.test_revision_http tests.test_reconciliation_http tests.test_reconciliation_performance tests.test_settlements_http tests.test_spending_http tests.test_browser_e2e tests.test_funding_e2e tests.test_spending_e2e -v
       - name: Stop disposable stack
         if: always()
         run: web/node_modules/.bin/supabase stop > /dev/null 2>&1 || true

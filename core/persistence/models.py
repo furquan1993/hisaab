@@ -37,6 +37,7 @@ from core.persistence.decisions import (
 from core.persistence.settlements import Contribution, FundingConfirmation
 from core.persistence.review import ImportReview
 from core.persistence.revisions import EntryLink, ParserRevision
+from core.persistence.spending import SpendingAssignment, SpendingEvent, SpendingGroup
 
 __all__ = [
     "Base",
@@ -55,6 +56,9 @@ __all__ = [
     "ImportReview",
     "Owner",
     "Statement",
+    "SpendingGroup",
+    "SpendingAssignment",
+    "SpendingEvent",
 ]
 
 

@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 from uuid import uuid4
 
-from sqlalchemy import delete, update
+from sqlalchemy import delete, text, update
 from sqlalchemy.orm import Session
 
 from core.persistence.models import Card, Entry, ImportRecord, Statement
@@ -148,11 +148,23 @@ class ReconciliationHTTPTests(ReconciliationFixture):
     def test_totals_include_all_entries_not_only_one_transaction_page(self):
         for sequence in range(2, 54):
             self.add(sequence=sequence, amount=Decimal("0.10"))
+        # Representative planner statistics matter on the fresh CI database;
+        # keep this completeness check independent of autovacuum timing.
+        with self.engine.begin() as connection:
+            connection.execute(text("ANALYZE hisaab.entries, hisaab.entry_decisions, hisaab.assignment_examples"))
         row = self.totals()[0]
         self.assertEqual(Decimal(row["net"]), Decimal("105.20"))
         self.assertEqual(row["entry_count"], 53)
-        code, entries = self.call("/funding_entries?limit=50&offset=50", self.tokens[0])
-        self.assertEqual(code, 200)
+        # Included entries are requested for a specific reconciliation group,
+        # matching FundingEntries rather than scanning every possible group.
+        query = (
+            "/funding_entries?limit=50&offset=50&order=id"
+            + "&card_id=eq." + str(self.records[0].card.id)
+            + "&account_id=eq." + self.account["id"]
+            + "&currency=eq.INR&month=eq.2026-01-01"
+        )
+        code, entries = self.call(query, self.tokens[0])
+        self.assertEqual(code, 200, entries)
         self.assertEqual(len(entries), 3)
         self.assertEqual(row["month"], "2026-01-01")
         self.assertFalse(row["blocked"])

@@ -9,6 +9,8 @@ The original five evidence entities remain intact. New owner-scoped sidecars hol
 
 ## Labels and assignments
 
+Trips use independent groups; see [Spending](../spending.md). Group assignments do not change Categories or funding Accounts.
+
 * `hisaab_api.labels` lists both kinds, including archived labels.
 * `save_label` creates at expected version zero, or renames/archives/restores an existing label at its exact expected version. Names are unique per owner and kind through the managed mutation API, case-insensitively. Archived names remain reserved.
 * `save_entry_decision` accepts an entry ID, expected decision version, and a patch. Omitted assignment keys retain their current values; explicit null removes an assignment. It derives ownership from verified authentication, checks the selected source, locks the statement and decision, validates same-owner labels, and writes a decision plus audit event atomically.
