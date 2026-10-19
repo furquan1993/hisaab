@@ -69,6 +69,14 @@ The rollout included a verified backup restore and migration rehearsal; original
 financial data was preserved. Future Auth/API migrations require separate reviewed
 rollout approval. Additional real financial loads remain gated.
 
+The monthly **Reconciliation** workspace now adds combined budget-account summaries
+with separate currencies and per-card full/partial contributions. Arrears retain
+their original statement month; receipts persist and corrections require explicit
+balance review. Summary totals are derived from existing evidence, not copied
+monthly charges. This new increment requires separately approved migrations
+`0010_funding_totals` and `0011_contributions`, which have not been applied to the
+hosted project. See [reconciliation and contributions](docs/reconciliation.md).
+
 ## Private database connection
 
 The app has private connection configuration plus an approved five-entity

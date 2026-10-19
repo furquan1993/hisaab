@@ -6,7 +6,15 @@ from sqlalchemy import LargeBinary, Numeric, select
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import configure_mappers
 
-from core.persistence.models import Base, Card, Entry, ImportRecord, Owner, Statement
+from core.persistence.models import (
+    Base,
+    Card,
+    Contribution,
+    Entry,
+    ImportRecord,
+    Owner,
+    Statement,
+)
 
 
 class ModelContractTests(unittest.TestCase):
@@ -26,6 +34,8 @@ class ModelContractTests(unittest.TestCase):
                 "hisaab.parser_revisions",
                 "hisaab.entry_links",
                 "hisaab.import_reviews",
+                "hisaab.contributions",
+                "hisaab.funding_confirmations",
             },
         )
         configure_mappers()
@@ -63,6 +73,24 @@ class ModelContractTests(unittest.TestCase):
         self.assertIsInstance(column.type, Numeric)
         self.assertEqual((column.type.precision, column.type.scale), (20, 2))
         self.assertTrue(column.type.asdecimal)
+
+    def test_contribution_amounts_are_exact_positive_decimals(self):
+        from decimal import Decimal
+
+        for value in (0.1, 1):
+            with self.assertRaises(TypeError):
+                Contribution(amount=value)
+        for value in (
+            "NaN",
+            "Infinity",
+            "-1.00",
+            "0.00",
+            "1.001",
+            "1000000000000000000.00",
+        ):
+            with self.assertRaises(ValueError):
+                Contribution(amount=Decimal(value))
+        self.assertEqual(Contribution(amount=Decimal("0.01")).amount, Decimal("0.01"))
 
     def test_named_keys_enforce_the_same_owner_and_statement(self):
         self.assertEqual(

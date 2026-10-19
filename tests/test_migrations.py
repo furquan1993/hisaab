@@ -1,5 +1,8 @@
 import unittest
 from io import StringIO
+from datetime import date
+from decimal import Decimal
+from uuid import uuid4
 from unittest.mock import patch
 
 from alembic import command
@@ -7,7 +10,8 @@ from alembic.script import ScriptDirectory
 from alembic.util import CommandError
 from sqlalchemy import inspect, text
 
-from core.persistence.models import Base
+from core.persistence.models import Base, Contribution, FundingAccount
+from tests.persistence_fixture import seed
 from tests.postgres_fixture import PostgresTests, migration_config, test_engine
 
 
@@ -41,7 +45,7 @@ class OfflineMigrationTests(unittest.TestCase):
     def test_single_head_and_no_secret_in_configuration(self):
         config = migration_config()
         self.assertEqual(
-            ScriptDirectory.from_config(config).get_heads(), ["0009_reasoned_review"]
+            ScriptDirectory.from_config(config).get_heads(), ["0011_contributions"]
         )
         self.assertIsNone(config.get_main_option("sqlalchemy.url"))
 
@@ -91,7 +95,48 @@ class MigrationPostgresTests(PostgresTests):
             self.connection.scalar(
                 text("SELECT version_num FROM public.hisaab_schema_version")
             ),
-            "0009_reasoned_review",
+            "0011_contributions",
+        )
+
+    def test_downgrade_refuses_to_discard_contribution_history(self):
+        records = seed(self.session)
+        account = FundingAccount(
+            owner_id=records.owner.id, name="Synthetic retained pot"
+        )
+        self.session.add(account)
+        self.session.flush()
+        self.session.add(
+            Contribution(
+                owner_id=records.owner.id,
+                card_id=records.card.id,
+                account_id=account.id,
+                currency="INR",
+                month=date(2026, 1, 1),
+                amount=Decimal("1.00"),
+                received_on=date(2026, 2, 1),
+                note="",
+                request=[],
+                actor_auth_user_id=uuid4(),
+                applications=[
+                    {
+                        "month": "2026-01-01",
+                        "amount": "1.00",
+                        "fingerprint": "synthetic",
+                    }
+                ],
+            )
+        )
+        self.session.flush()
+        with self.assertRaises(CommandError), self.connection.begin_nested():
+            command.downgrade(migration_config(self.connection), "0010_funding_totals")
+        self.assertEqual(
+            self.connection.scalar(
+                text("SELECT version_num FROM public.hisaab_schema_version")
+            ),
+            "0011_contributions",
+        )
+        self.assertEqual(
+            self.connection.scalar(text("SELECT count(*) FROM hisaab.contributions")), 1
         )
 
     def test_upgrade_is_idempotent(self):

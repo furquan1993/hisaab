@@ -14,6 +14,7 @@ export const demoEntries = cases.map((row, index) =>
     import_id: `demo-import-${row.card}-${row.bill}-${row.selected}`,
     statement_id: `demo-statement-${row.card}-${row.bill}`,
     card_label: cards[row.card][0],
+    card_id: `demo-card-${row.card}`,
     bank: cards[row.card][1],
     statement_date: row.bill,
     transaction_date: row.date || null,

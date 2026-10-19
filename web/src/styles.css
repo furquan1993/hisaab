@@ -853,6 +853,100 @@ td .card-label {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 18px;
 }
+.reconciliation-page > p {
+  max-width: 850px;
+  margin: 18px 0;
+}
+.reconciliation-page > .ledger {
+  margin-top: 24px;
+  container-type: inline-size;
+}
+.reconciliation-page caption {
+  padding: 18px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: #344c39;
+}
+.funding-label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+.funding-label input {
+  font: inherit;
+  padding: 9px;
+  border: 1px solid #d9e1d9;
+  border-radius: 6px;
+  min-width: 0;
+}
+.funding-account {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  color: #344c39;
+  font-size: 11px;
+  text-align: left;
+}
+.funding-account span:last-child {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.funding-card-list {
+  width: calc(100cqw - 50px);
+  position: sticky;
+  left: 24px;
+  white-space: normal;
+}
+.funding-card {
+  padding: 18px 0;
+  border-bottom: 1px solid #e2e7df;
+  font-size: 12px;
+}
+.funding-card > p,
+.funding-detail > p {
+  margin: 10px 0;
+}
+.funding-detail {
+  background: #f8faf6;
+  border: 1px solid #d9e1d9;
+  border-radius: 8px;
+  margin-top: 18px;
+  padding: 18px;
+  font-size: 12px;
+}
+.funding-detail .section-head {
+  gap: 12px;
+}
+.funding-detail .section-head button {
+  font-size: 12px;
+  line-height: 1.4;
+}
+.funding-detail .decision-form {
+  padding: 20px 0;
+}
+.funding-detail .funding-label {
+  margin: 14px 0;
+}
+.funding-entries {
+  margin-top: 14px;
+}
+.funding-entries summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.funding-entries ul,
+.contribution-history,
+.contribution-history ul {
+  padding-left: 20px;
+}
+.contribution-history > li {
+  margin: 12px 0;
+}
 .login-card form {
   display: grid;
   gap: 17px;

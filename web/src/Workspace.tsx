@@ -1,7 +1,15 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { readPage, type BrowserClient } from "./client";
 import { demoEntries } from "./demo";
-import { filterEntries, formatAmount, type Entry, type View } from "./domain";
+import {
+  filterEntries,
+  formatAmount,
+  monthRange,
+  type Entry,
+  type View,
+} from "./domain";
+import Reconciliation from "./Reconciliation";
+import type { Confirmation, Contribution } from "./funding-domain";
 import Evidence from "./Evidence";
 import Labels from "./Labels";
 import { useLabels } from "./useLabels";
@@ -31,9 +39,13 @@ export default function Workspace({
   onExit: () => void;
 }) {
   const [section, setSection] = useState<
-    "statements" | "account" | "category" | "imports"
+    "statements" | "account" | "category" | "imports" | "reconciliation"
   >("statements");
   const labelStore = useLabels(api, ownerId);
+  const [fundingMonth, setFundingMonth] = useState(initialRange[0].slice(0, 7));
+  const [fundingBusy, setFundingBusy] = useState(false);
+  const [contributions, setContributions] = useState<Contribution[]>([]);
+  const [confirmations, setConfirmations] = useState<Confirmation[]>([]);
   const [demoRows, setDemoRows] = useState(() =>
     demoEntries.map((row) => ({ ...row })),
   );
@@ -289,6 +301,7 @@ export default function Workspace({
         {(
           [
             ["statements", "Statements"],
+            ["reconciliation", "Reconciliation"],
             ["account", "Accounts"],
             ["category", "Categories"],
             ["imports", "Imports"],
@@ -299,6 +312,7 @@ export default function Workspace({
             key={value}
             className={"nav-item " + (section === value ? "nav-active" : "")}
             aria-current={section === value ? "page" : undefined}
+            disabled={fundingBusy}
             onClick={() => {
               setSection(value);
               resetDetails();
@@ -328,11 +342,13 @@ export default function Workspace({
             <strong>
               {section === "statements"
                 ? "Statements"
-                : section === "account"
-                  ? "Accounts"
-                  : section === "imports"
-                    ? "Imports"
-                    : "Categories"}
+                : section === "reconciliation"
+                  ? "Reconciliation"
+                  : section === "account"
+                    ? "Accounts"
+                    : section === "imports"
+                      ? "Imports"
+                      : "Categories"}
             </strong>
           </span>
           <button className="quiet" onClick={onExit}>
@@ -350,6 +366,33 @@ export default function Workspace({
               setSelected(null);
               setEditing(null);
             }}
+          />
+        ) : section === "reconciliation" ? (
+          <Reconciliation
+            api={api}
+            ownerId={ownerId}
+            month={fundingMonth}
+            onMonth={setFundingMonth}
+            demoRows={demoRows}
+            labels={labelStore.labels}
+            receipts={contributions}
+            confirmations={confirmations}
+            onReceipt={(receipt) =>
+              setContributions((current) => [...current, receipt])
+            }
+            onConfirm={(confirmation) =>
+              setConfirmations((current) => [...current, confirmation])
+            }
+            onEntries={() => {
+              const [first, last] = monthRange(fundingMonth + "-01");
+              setStart(first);
+              setEnd(last);
+              setDateBasis("reviewed");
+              changeView("statement");
+              setSection("statements");
+            }}
+            onImports={() => setSection("imports")}
+            onBusyChange={setFundingBusy}
           />
         ) : section !== "statements" ? (
           <Labels

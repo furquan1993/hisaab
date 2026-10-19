@@ -6,15 +6,23 @@ import subprocess
 import unittest
 from hashlib import sha256
 from io import StringIO
+from datetime import date
+from decimal import Decimal
 from unittest.mock import patch
 from uuid import uuid4
 
 from alembic import command
 from sqlalchemy import create_engine, select, text
+from sqlalchemy.orm import Session
 
 from core.backup import backup_database
 from core.imports import import_pdf
-from core.persistence.models import Base
+from core.persistence.models import (
+    Base,
+    Contribution,
+    FundingAccount,
+    FundingConfirmation,
+)
 from tests.import_fixture import ImportTestsBase
 from tests.postgres_fixture import migration_config
 from tests.test_snapshot import encrypt, statement_bytes
@@ -43,6 +51,43 @@ class ImportRecoveryTests(ImportTestsBase):
         )
         self.path.write_bytes(statement_bytes("SECOND SYNTHETIC SOURCE"))
         import_pdf(self.engine, self.owner, self.card, self.path)
+        # Recovery must preserve populated settlement sidecars, not just empty tables.
+        with Session(self.engine) as session, session.begin():
+            account = FundingAccount(owner_id=self.owner, name="Synthetic recovery pot")
+            session.add(account)
+            session.flush()
+            actor = uuid4()
+            scope = dict(
+                owner_id=self.owner,
+                card_id=self.card,
+                account_id=account.id,
+                currency="INR",
+                month=date(2026, 1, 1),
+                actor_auth_user_id=actor,
+            )
+            session.add(
+                Contribution(
+                    **scope,
+                    amount=Decimal("1.23"),
+                    received_on=date(2026, 2, 1),
+                    note="Synthetic received contribution",
+                    request=[],
+                    applications=[
+                        {
+                            "month": "2026-01-01",
+                            "amount": "1.23",
+                            "fingerprint": "synthetic-recovery-fingerprint",
+                        }
+                    ],
+                )
+            )
+            session.add(
+                FundingConfirmation(
+                    **scope,
+                    fingerprint="synthetic-recovery-fingerprint",
+                    reason="Synthetic verified balance",
+                )
+            )
         before = rows(self.engine)
         native_run = subprocess.run
 

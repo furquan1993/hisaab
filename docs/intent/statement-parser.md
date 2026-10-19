@@ -28,10 +28,12 @@ These requirements extend the local core beyond the initial parsing milestone:
 
 - Each entry can have one funding source, or remain unassigned pending review. Splitting one transaction across funding sources is deferred.
 - Funding sources can represent bank accounts, budget pots, or people. They are distinct from the card used and from spending categories.
-- Run reconciliation once all statements for the month are ready. Include all of that user's cards' statements for that reconciliation month; no manual statement-selection step is required.
+- Reconcile each available card without waiting for all registered cards to generate statements. The monthly summary includes all available selected-source statements automatically; no manual statement-selection step is required.
 - Tag each statement to the calendar month in which the bank generated/issued it, using its printed generation/issue (statement) date, not purchase dates, payment due dates, upload time or parser-run time. This rule applies to every month; January was only an illustrative example, not a fixed reconciliation period. Preserve each entry's original statement and card association.
-- Combine allocations across cards into one monthly total per funding source, enabling one contribution rather than separate contributions for each card.
-- Mark the monthly funding-source group settled when that source has contributed its share. Settlement does not mean the credit-card bill has been paid.
+- Combine allocations across cards into a monthly summary per budget account and currency. This summary is a view, not the settlement unit.
+- Record full or partial contributions separately by card, budget account and currency, applied oldest outstanding statement month first. Unpaid balances remain attributed to their original month even when paid later. Settlement does not mean the credit-card bill has been paid.
+- Refunds and reversals reduce their posting statement month's total. Negative totals remain visible with no contribution due and no automatic negative carryover. Currencies stay separate.
+- Preserve contribution history after transaction corrections. Mark affected months Needs review and require confirmation of revised balances rather than silently rewriting settlement status.
 - Hisaab records settlement; it does not move money. The bank account receiving contributions is not relevant to this workflow.
 - Monthly reconciliation remains owner-scoped and must not reveal the other user's private records.
 
@@ -82,6 +84,18 @@ These are confirmed requirements, not features delivered by the local parser:
 - Suggestions, settlement calculations, browser-side PDF extraction, shared access, transfers, split allocations, budget-limit/balance tracking and automatic retention deletion are outside this first UI milestone.
 - Existing CLI import and backup workflows remain supported. Real hosted loading remains a separately approved backup/smoke-validation gate.
 - Scope and the React + TypeScript + Vite frontend stack are confirmed. Implementation sequencing, API security design and edit/filter details remain subject to review in [the staged delivery plan](https://linear.app/furquan/document/static-review-workspace-confirmed-intent-and-staged-delivery-57d96644cf6b). No browser access policies or UI implementation are implied by this intent update.
+
+## Approved monthly reconciliation increment
+
+The operator approved implementing the monthly summary and settlement workflow
+together. Reuse existing reviewed transaction evidence for derived totals; add only
+the receipt and confirmation records needed to persist contributions and reviewed
+balance changes. Exclude card repayments from spending. Do not duplicate arrears as
+new monthly charges, mix currencies or wait for unrelated cards. Full and partial
+contributions retain original-month applications. No money transfers, automatic
+currency conversion or split transaction allocations are introduced. See
+[implementation and financial contract](../reconciliation.md). New hosted migrations
+still require a separately approved backup/recovery rollout.
 
 ## Out of scope for the original local parser slice
 

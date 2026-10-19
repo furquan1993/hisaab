@@ -33,6 +33,7 @@ from core.persistence.decisions import (
     EntryDecision,
     FundingAccount,
 )
+from core.persistence.settlements import Contribution, FundingConfirmation
 from core.persistence.review import ImportReview
 from core.persistence.revisions import EntryLink, ParserRevision
 
@@ -40,6 +41,8 @@ __all__ = [
     "Base",
     "Card",
     "Category",
+    "Contribution",
+    "FundingConfirmation",
     "DecisionEvent",
     "Entry",
     "EntryDecision",

@@ -9,6 +9,7 @@ export const entrySchema = z.object({
   import_id: z.string(),
   statement_id: z.string(),
   card_label: z.string(),
+  card_id: z.string().optional(),
   bank: z.string(),
   statement_date: date,
   transaction_date: date,

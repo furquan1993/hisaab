@@ -36,6 +36,9 @@ class BrowserE2ETests(SupabaseTests):
             session.flush()
             session.add(new_entry(candidate))
             session.commit()
+        self.run_frontend(("auth-smoke.mjs", "inline-smoke.mjs"))
+
+    def run_frontend(self, scripts):
         environment = os.environ.copy()
         environment.update(
             VITE_SUPABASE_URL=self.api,
@@ -65,7 +68,7 @@ class BrowserE2ETests(SupabaseTests):
                         time.sleep(0.2)
                 else:
                     self.fail("Isolated frontend readiness timed out.")
-                for script in ("auth-smoke.mjs", "inline-smoke.mjs"):
+                for script in scripts:
                     result = subprocess.run(
                         ["node", "e2e/" + script],
                         cwd=ROOT / "web",

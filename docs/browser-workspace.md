@@ -2,8 +2,7 @@
 
 React 19.3.1, TypeScript 7.0.2 and Vite 8.3.4 serve static assets only.
 Supabase JS 2.118.0 handles managed email/password Auth and the managed Data API.
-There is no custom data server, SSR, browser parser, money transfer or settlement
-calculation. The initial hosted release was read-only. The approved hosted database
+There is no custom data server, SSR, browser parser or money transfer. The initial hosted release was read-only. The approved hosted database
 rollout is now complete through `0009_reasoned_review`, supporting independent
 Account/Category management, versioned assignments, reasoned entry and statement
 review, and explicit parser-revision comparison. Future database changes still
@@ -33,6 +32,19 @@ and existing save/version checks are unchanged.
 
 The developer server serves static application assets, not financial data.
 Production needs only the static `web/dist` directory. Node 24 is used in CI.
+
+## Monthly reconciliation increment
+
+The **Reconciliation** section combines budget-account spending across available
+cards by statement month and currency, with per-card full/partial contributions,
+original-month arrears, receipt history and reasoned reconfirmation after corrections.
+No all-cards readiness gate is imposed. Summary/card/entry drill-downs and contribution
+panels are inline. See [financial rules, data models and API contracts](reconciliation.md).
+
+This increment needs `0010_funding_totals` and `0011_contributions`. Those revisions
+are implemented and tested separately from the approved hosted target
+`0009_reasoned_review`; they have not been deployed. Do not treat implementation,
+a green test suite or a frontend rebuild as hosted migration approval.
 
 ## Public browser configuration
 
@@ -214,7 +226,7 @@ umask 077
 web/node_modules/.bin/supabase status -o json > /tmp/hisaab-supabase-status.json
 HISAAB_SUPABASE_TESTS=1 HISAAB_BROWSER_TESTS=1 \
   HISAAB_SUPABASE_STATUS_FILE=/tmp/hisaab-supabase-status.json \
-  uv run python -m unittest tests.test_browser_http tests.test_browser_e2e -v
+  uv run python -m unittest tests.test_browser_http tests.test_decisions_http tests.test_review tests.test_revision_http tests.test_reconciliation_http tests.test_settlements_http tests.test_browser_e2e tests.test_funding_e2e -v
 ```
 
 The status file contains **disposable development secrets**; never upload it or
