@@ -26,6 +26,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
+from core.persistence.descriptions import EntryDescription
 from core.persistence.assignments import AssignmentExample
 from core.persistence.base import SCHEMA, Base, CreatedAt, Identity, Owned
 from core.persistence.decisions import (
@@ -49,6 +50,7 @@ __all__ = [
     "DecisionEvent",
     "Entry",
     "EntryDecision",
+    "EntryDescription",
     "EntryLink",
     "ParserRevision",
     "FundingAccount",

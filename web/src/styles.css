@@ -1821,3 +1821,13 @@ td .card-label {
   min-width: 36px;
   min-height: 36px;
 }
+
+.description-search label {
+  flex: 1;
+  min-width: 0;
+}
+.description-search input {
+  flex: 1;
+  min-width: 0;
+  max-width: 220px;
+}

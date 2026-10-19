@@ -39,7 +39,7 @@ export default function SpendingEntryList({
             ?.name ??
           row.account_name ??
           "Unassigned account";
-        const description = values.description;
+        const description = row.friendly_description ?? values.description;
         return (
           <li key={row.id}>
             {onSelect && (
@@ -56,6 +56,9 @@ export default function SpendingEntryList({
             )}
             <div className="spending-entry-info">
               <strong>{description}</strong>
+              {row.friendly_description && (
+                <small>Statement: {row.description}</small>
+              )}
               <div className="spending-entry-meta">
                 <time dateTime={values.transaction_date ?? undefined}>
                   {spendingDate(values.transaction_date)}

@@ -30,6 +30,7 @@ class ModelContractTests(unittest.TestCase):
                 "hisaab.categories",
                 "hisaab.accounts",
                 "hisaab.entry_decisions",
+                "hisaab.entry_descriptions",
                 "hisaab.decision_events",
                 "hisaab.parser_revisions",
                 "hisaab.entry_links",

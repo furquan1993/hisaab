@@ -38,6 +38,7 @@ export async function readPage(
   signal: AbortSignal,
   basis: DateBasis = "original",
   sort: DateSort = "newest",
+  search = "",
 ) {
   let query = api.from("entries").select("*", { count: "exact" });
   if (view === "review") query = query.eq("needs_review", true);
@@ -46,6 +47,16 @@ export async function readPage(
       (basis === "reviewed" ? "effective_" : "") +
       (view === "statement" ? "statement_date" : "transaction_date");
     query = query.eq("is_selected", true).gte(field, start).lte(field, end);
+  }
+  if (search.trim()) {
+    // Quote PostgREST values; escape LIKE wildcards so search remains literal.
+    const pattern = `%${search.trim().replace(/[\\%_]/g, "\\$&")}%`;
+    const value = JSON.stringify(pattern);
+    query = query.or(
+      ["description", "effective_description", "friendly_description"]
+        .map((field) => `${field}.ilike.${value}`)
+        .join(","),
+    );
   }
   const { data, error, count } = await query
     .order("effective_transaction_date", {

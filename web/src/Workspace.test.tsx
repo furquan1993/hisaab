@@ -163,3 +163,88 @@ it.each(["Statement date", "Transaction date"])(
     expect(screen.queryByRole("group", { name: "Browse months" })).toBeNull();
   },
 );
+
+it("keeps a friendly-description draft on conflict and saves without changing assignments or decision version", async () => {
+  const user = userEvent.setup();
+  const row = {
+    ...demoEntries[0],
+    account_id: "pot",
+    category_id: "food",
+    decision_version: 7,
+  };
+  vi.mocked(readPage).mockResolvedValue({ rows: [row], total: 1 });
+  const rpc = vi
+    .fn()
+    .mockResolvedValueOnce({ data: null, error: { code: "PT409" } })
+    .mockResolvedValueOnce({
+      data: {
+        friendly_description: "Amazon desk lamp",
+        friendly_description_version: 1,
+      },
+      error: null,
+    })
+    .mockResolvedValueOnce({
+      data: { account_id: "pot", category_id: null, version: 8 },
+      error: null,
+    });
+  render(
+    <Workspace
+      api={{ rpc } as unknown as BrowserClient}
+      owner="Owner"
+      initialRange={["2026-01-01", "2026-01-31"]}
+      onExit={() => {}}
+    />,
+  );
+  await user.click(
+    await screen.findByRole("button", {
+      name: `Details for ${row.description}`,
+    }),
+  );
+  await user.click(screen.getByRole("button", { name: "Edit description" }));
+  const input = screen.getByLabelText("Friendly description", { exact: true });
+  await user.type(input, "Amazon desk lamp");
+  await user.click(screen.getByRole("button", { name: "Save description" }));
+  expect((await screen.findByRole("alert")).textContent).toContain(
+    "Your draft is kept",
+  );
+  expect((input as HTMLInputElement).value).toBe("Amazon desk lamp");
+  await user.click(screen.getByRole("button", { name: "Save description" }));
+  await screen.findByText("Amazon desk lamp");
+  expect(screen.getByText(`Statement: ${row.description}`)).toBeTruthy();
+  expect(
+    (
+      screen.getByLabelText(
+        `Account for ${row.description}`,
+      ) as HTMLSelectElement
+    ).value,
+  ).toBe("pot");
+  await user.selectOptions(
+    screen.getByLabelText(`Category for ${row.description}`),
+    "",
+  );
+  await waitFor(() => expect(rpc).toHaveBeenCalledTimes(3));
+  expect(rpc.mock.calls[2][1].p_expected_version).toBe(7);
+  expect(rpc.mock.calls[0][0]).toBe("save_friendly_description");
+  expect(rpc.mock.calls[0][1].p_expected_version).toBe(0);
+});
+
+it("passes description searches to the paginated API and resets to the first page", async () => {
+  const user = userEvent.setup();
+  vi.mocked(readPage).mockResolvedValue({ rows: [demoEntries[0]], total: 101 });
+  render(
+    <Workspace
+      api={{} as BrowserClient}
+      owner="Owner"
+      initialRange={["2026-01-01", "2026-01-31"]}
+      onExit={() => {}}
+    />,
+  );
+  await screen.findByText(demoEntries[0].description);
+  await user.click(screen.getByRole("button", { name: "Next" }));
+  await waitFor(() => expect(vi.mocked(readPage).mock.lastCall?.[4]).toBe(50));
+  await user.type(screen.getByLabelText("Search descriptions"), "Amazon");
+  await waitFor(() => {
+    expect(vi.mocked(readPage).mock.lastCall?.[4]).toBe(0);
+    expect(vi.mocked(readPage).mock.lastCall?.[8]).toBe("Amazon");
+  });
+});
