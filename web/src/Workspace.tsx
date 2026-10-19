@@ -13,6 +13,9 @@ import {
 } from "./domain";
 import Reconciliation from "./Reconciliation";
 import Summary from "./Summary";
+import Spending, { type SpendingFocus } from "./Spending";
+import { useSpending } from "./useSpending";
+import EntryTripEditor from "./EntryTripEditor";
 import { assignEntries } from "./auto-assignments";
 import type { Confirmation, Contribution } from "./funding-domain";
 import Evidence from "./Evidence";
@@ -50,6 +53,7 @@ export default function Workspace({
     | "category"
     | "imports"
     | "reconciliation"
+    | "spending"
   >("statements");
   const labelStore = useLabels(api, ownerId);
   const [fundingMonth, setFundingMonth] = useState(initialRange[0].slice(0, 7));
@@ -87,6 +91,16 @@ export default function Workspace({
   const [error, setError] = useState(""),
     [selected, setSelected] = useState<Entry | null>(null);
   const [refresh, setRefresh] = useState(0);
+  const [spendingFocus, setSpendingFocus] = useState<SpendingFocus>();
+  const [tripEntry, setTripEntry] = useState<Entry | null>(null);
+  const tripTrigger = useRef<HTMLButtonElement | null>(null);
+  const spendingStore = useSpending(
+    api,
+    ownerId,
+    demoRows.current,
+    section === "spending" || !!tripEntry,
+    refresh,
+  );
   const evidenceTrigger = useRef<HTMLButtonElement | null>(null);
   const invalid = !start || !end || start > end;
   useEffect(() => {
@@ -191,6 +205,7 @@ export default function Workspace({
     setEditing(null);
     setReviewing(null);
     setNotice("");
+    setTripEntry(null);
   }
   // Native disclosure buttons preserve table semantics and support Enter/Space.
   // https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/
@@ -449,6 +464,7 @@ export default function Workspace({
         {(
           [
             ["summary", "Summary"],
+            ["spending", "Spending"],
             ["statements", "Statements"],
             ["reconciliation", "Reconciliation"],
             ["account", "Accounts"],
@@ -461,9 +477,10 @@ export default function Workspace({
             key={value}
             className={"nav-item " + (section === value ? "nav-active" : "")}
             aria-current={section === value ? "page" : undefined}
-            disabled={fundingBusy}
+            disabled={fundingBusy || spendingStore.busy}
             onClick={() => {
               setSection(value);
+              if (value === "spending") setSpendingFocus(undefined);
               resetDetails();
             }}
           >
@@ -491,15 +508,17 @@ export default function Workspace({
             <strong>
               {section === "summary"
                 ? "Summary"
-                : section === "statements"
-                  ? "Statements"
-                  : section === "reconciliation"
-                    ? "Reconciliation"
-                    : section === "account"
-                      ? "Accounts"
-                      : section === "imports"
-                        ? "Imports"
-                        : "Categories"}
+                : section === "spending"
+                  ? "Spending"
+                  : section === "statements"
+                    ? "Statements"
+                    : section === "reconciliation"
+                      ? "Reconciliation"
+                      : section === "account"
+                        ? "Accounts"
+                        : section === "imports"
+                          ? "Imports"
+                          : "Categories"}
             </strong>
           </span>
           <button className="quiet" onClick={onExit}>
@@ -534,6 +553,24 @@ export default function Workspace({
             }}
             onImports={() => setSection("imports")}
             onReconciliation={() => setSection("reconciliation")}
+            onSpending={(id, period, currency) => {
+              setSpendingFocus({
+                view: "category",
+                id: id === "unassigned" ? "uncategorized" : id,
+                period,
+                currency,
+              });
+              setSection("spending");
+              resetDetails();
+            }}
+          />
+        ) : section === "spending" ? (
+          <Spending
+            store={spendingStore}
+            labels={labelStore.labels}
+            demo={!api}
+            initialFocus={spendingFocus}
+            onCategories={() => setSection("category")}
           />
         ) : section === "imports" ? (
           <Imports
@@ -915,6 +952,29 @@ export default function Workspace({
                                   >
                                     <button
                                       type="button"
+                                      aria-label="Assign trip or group"
+                                      aria-pressed={tripEntry?.id === row.id}
+                                      disabled={
+                                        saving ||
+                                        spendingStore.busy ||
+                                        !row.is_selected ||
+                                        effective.entry_type === "payment"
+                                      }
+                                      onClick={(event) => {
+                                        tripTrigger.current =
+                                          event.currentTarget;
+                                        setEditing(null);
+                                        setReviewing(null);
+                                        setSelected(null);
+                                        setNotice("");
+
+                                        setTripEntry({ ...row });
+                                      }}
+                                    >
+                                      Trip / group
+                                    </button>
+                                    <button
+                                      type="button"
                                       className="evidence-link"
                                       aria-label="View evidence"
                                       aria-pressed={selected?.id === row.id}
@@ -925,6 +985,7 @@ export default function Workspace({
                                         setEditing(null);
                                         setReviewing(null);
                                         setNotice("");
+                                        setTripEntry(null);
                                         setSelected({ ...row });
                                       }}
                                     >
@@ -946,6 +1007,7 @@ export default function Workspace({
                                         setReviewing(null);
                                         setSelected(null);
                                         setNotice("");
+                                        setTripEntry(null);
                                         setEditing({ ...row });
                                       }}
                                     >
@@ -968,6 +1030,7 @@ export default function Workspace({
                                         setEditing(null);
                                         setSelected(null);
                                         setNotice("");
+                                        setTripEntry(null);
                                         setReviewing({ ...row });
                                       }}
                                     >
@@ -978,6 +1041,28 @@ export default function Workspace({
                                     <p role="status" className="demo-notice">
                                       {notice}
                                     </p>
+                                  )}
+                                  {tripEntry?.id === row.id && (
+                                    <EntryTripEditor
+                                      key={tripEntry.id}
+                                      entry={tripEntry}
+                                      store={spendingStore}
+                                      onClose={() => {
+                                        setTripEntry(null);
+                                        tripTrigger.current?.focus({
+                                          preventScroll: true,
+                                        });
+                                      }}
+                                      onSaved={() => {
+                                        setTripEntry(null);
+                                        setNotice(
+                                          "Trip assignment saved. Account and category are unchanged.",
+                                        );
+                                        tripTrigger.current?.focus({
+                                          preventScroll: true,
+                                        });
+                                      }}
+                                    />
                                   )}
                                   {reviewing?.id === row.id && (
                                     <ReviewEditor

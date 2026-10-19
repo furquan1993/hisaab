@@ -36,6 +36,11 @@ Production needs only the static `web/dist` directory. Node 24 is used in CI.
 
 ## Monthly reconciliation increment
 
+The independent [Spending explorer](spending.md) adds category and trip/group
+views alongside reconciliation. Trip membership does not alter an entry's
+category or funding account. Migration `0015_spending_groups` is delivered for
+the separately reviewed hosted rollout; the synthetic demo works immediately.
+
 The **Reconciliation** section combines budget-account spending across available
 cards by statement month and currency, with per-card full/partial contributions,
 original-month arrears, receipt history and reasoned reconfirmation after corrections.

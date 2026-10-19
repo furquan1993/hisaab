@@ -1,5 +1,7 @@
 # Implementation checkpoints
 
+Current Spending implementation: [spending.md](spending.md).
+
 Live feature status belongs to Linear FUR-8 and FUR-14. This is the execution checklist for the approved combined implementation.
 
 - [x] Complete owner-scoped reconciliation reads and focused tests.
