@@ -63,10 +63,11 @@ data path; no custom app server or privileged browser credentials.
 Start with `cd web`, `npm ci`, then `npm run dev`. Open
 http://127.0.0.1:5173/hisaab/ and choose **Explore synthetic demo**.
 See [setup, security, deployment and verification](docs/browser-workspace.md).
-New Auth/API migrations require separate reviewed rollout approval; they were
-not applied to the hosted project during implementation. The existing hosted
-release remains read-only until the new editing migrations are reviewed and
-separately approved. Additional real financial loads remain gated.
+The approved hosted rollout is complete through `0009_reasoned_review`, enabling
+Account/Category management, assignments, reasoned review and source revisions.
+The rollout included a verified backup restore and migration rehearsal; original
+financial data was preserved. Future Auth/API migrations require separate reviewed
+rollout approval. Additional real financial loads remain gated.
 
 ## Private database connection
 

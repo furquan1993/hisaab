@@ -65,16 +65,17 @@ class BrowserE2ETests(SupabaseTests):
                         time.sleep(0.2)
                 else:
                     self.fail("Isolated frontend readiness timed out.")
-                result = subprocess.run(
-                    ["node", "e2e/auth-smoke.mjs"],
-                    cwd=ROOT / "web",
-                    env=environment,
-                    capture_output=True,
-                    timeout=60,
-                )
-                self.assertEqual(
-                    result.returncode, 0, "Isolated Auth browser smoke failed."
-                )
+                for script in ("auth-smoke.mjs", "inline-smoke.mjs"):
+                    result = subprocess.run(
+                        ["node", "e2e/" + script],
+                        cwd=ROOT / "web",
+                        env=environment,
+                        capture_output=True,
+                        timeout=60,
+                    )
+                    self.assertEqual(
+                        result.returncode, 0, "Isolated browser smoke failed: " + script
+                    )
             finally:
                 server.terminate()
                 try:

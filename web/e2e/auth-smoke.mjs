@@ -16,6 +16,7 @@ try {
   await page.getByText("SYNTHETIC SHOP", { exact: true }).waitFor();
   await page.reload();
   await page.getByText("SYNTHETIC SHOP", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "Details for SYNTHETIC SHOP", exact: true }).click();
   const evidenceTrigger = page.getByRole("button", { name: "View evidence" });
   await evidenceTrigger.click();
   const evidenceHeading = page.getByRole("heading", {
@@ -38,6 +39,7 @@ try {
   await page.getByRole("button",{name:"Create Category",exact:true}).click();
   await page.getByRole("button",{name:"Edit Synthetic browser category"}).waitFor();
   await page.getByRole("button",{name:"Statements",exact:true}).click();
+  await page.getByRole("button", { name: "Details for SYNTHETIC SHOP", exact: true }).click();
   await page.getByRole("button",{name:"Edit entry",exact:true}).click();
   await page.getByLabel("Account",{exact:true}).selectOption({label:"Synthetic browser pot"});
   await page.getByLabel("Category",{exact:true}).selectOption({label:"Synthetic browser category"});
@@ -46,6 +48,7 @@ try {
   await page.reload();
   await expect(page.getByRole("cell",{name:"Synthetic browser pot",exact:true})).toBeVisible();
   await expect(page.getByRole("cell",{name:"Synthetic browser category",exact:true})).toBeVisible();
+  await page.getByRole("button", { name: "Details for SYNTHETIC SHOP", exact: true }).click();
   await page.getByRole("button",{name:"Review entry",exact:true}).click();
   await page.getByLabel("Reviewed description",{exact:true}).fill("SYNTHETIC REVIEWED SHOP");
   await page.getByLabel("Review reason",{exact:true}).fill("Synthetic checked original merchant text");

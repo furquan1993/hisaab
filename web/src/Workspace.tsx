@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { readPage, type BrowserClient } from "./client";
 import { demoEntries } from "./demo";
 import { filterEntries, formatAmount, type Entry, type View } from "./domain";
@@ -37,6 +37,9 @@ export default function Workspace({
   const [demoRows, setDemoRows] = useState(() =>
     demoEntries.map((row) => ({ ...row })),
   );
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const pendingFocus = useRef<string | null>(null);
   const [editing, setEditing] = useState<Entry | null>(null);
   const [reviewing, setReviewing] = useState<Entry | null>(null);
   const reviewTrigger = useRef<HTMLButtonElement | null>(null);
@@ -93,6 +96,36 @@ export default function Workspace({
       });
     return () => controller.abort();
   }, [api, view, start, end, offset, invalid, refresh, demoRows, dateBasis]);
+  useEffect(() => {
+    if (loading || !pendingFocus.current) return;
+    const toggle = document.getElementById(
+      "entry-toggle-" + pendingFocus.current,
+    );
+    (toggle ?? ledgerHeading.current)?.focus({ preventScroll: true });
+    pendingFocus.current = null;
+  }, [loading, rows]);
+  function resetDetails() {
+    setExpandedId(null);
+    setSelected(null);
+    setEditing(null);
+    setReviewing(null);
+    setNotice("");
+  }
+  // Native disclosure buttons preserve table semantics and support Enter/Space.
+  // https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/
+  function toggleRow(id: string) {
+    if (saving) return;
+    resetDetails();
+    setExpandedId(expandedId === id ? null : id);
+  }
+  async function saveEntry(action: () => Promise<void>) {
+    setSaving(true);
+    try {
+      await action();
+    } finally {
+      setSaving(false);
+    }
+  }
   function demoSourceDecision(
     candidate: string,
     base: string | null,
@@ -187,9 +220,9 @@ export default function Workspace({
             : row,
         ),
       );
+    pendingFocus.current = reviewing.id;
     setReviewing(null);
     setNotice("Review saved. Original facts and flags are preserved.");
-    ledgerHeading.current?.focus();
   }
   async function saveAssignments(patch: AssignmentPatch) {
     if (!editing) return;
@@ -216,11 +249,11 @@ export default function Workspace({
         ),
       );
     }
+    pendingFocus.current = editing.id;
     setEditing(null);
     setNotice(
       "Assignments saved. Source facts and review issues are unchanged.",
     );
-    ledgerHeading.current?.focus();
   }
   function labelName(
     kind: "account" | "category",
@@ -237,13 +270,13 @@ export default function Workspace({
   function changeView(next: View) {
     setView(next);
     setOffset(0);
-    setSelected(null);
+    resetDetails();
   }
   function changeRange(value: string, first: boolean) {
     if (first) setStart(value);
     else setEnd(value);
     setOffset(0);
-    setSelected(null);
+    resetDetails();
   }
   return (
     <div className="shell">
@@ -268,9 +301,7 @@ export default function Workspace({
             aria-current={section === value ? "page" : undefined}
             onClick={() => {
               setSection(value);
-              setReviewing(null);
-              setSelected(null);
-              setEditing(null);
+              resetDetails();
             }}
           >
             {label}
@@ -384,7 +415,10 @@ export default function Workspace({
                   <p>Every row kept. Nothing silently combined.</p>
                 </div>
                 <button
-                  onClick={() => setRefresh((n) => n + 1)}
+                  onClick={() => {
+                    resetDetails();
+                    setRefresh((n) => n + 1);
+                  }}
                   disabled={loading}
                 >
                   ↻ Refresh
@@ -422,7 +456,7 @@ export default function Workspace({
                           event.target.value as "original" | "reviewed",
                         );
                         setOffset(0);
-                        setSelected(null);
+                        resetDetails();
                       }}
                     >
                       <option value="original">Original extracted dates</option>
@@ -481,138 +515,260 @@ export default function Workspace({
                       <th>Account</th>
                       <th>Category</th>
                       <th className="amount">Amount</th>
-                      <th>Evidence</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.map((row) => {
                       const effective = reviewedValues(row);
                       return (
-                        <tr key={row.id}>
-                          <td>
-                            <strong>{effective.description}</strong>
-                            {effective.description !== row.description && (
-                              <small>Extracted: {row.description}</small>
-                            )}
-                            <small>
-                              {row.needs_review
-                                ? "● Needs review"
-                                : "Selected source"}
-                              {!row.is_selected && " · Candidate"}
-                            </small>
-                          </td>
-                          <td>
-                            <strong className="card-label">
-                              {row.card_label}
-                            </strong>
-                            <small>
-                              {(row.effective_statement_date === undefined
-                                ? row.statement_date
-                                : row.effective_statement_date) ??
-                                "Statement date unknown"}
-                              {row.effective_statement_date !== undefined &&
-                                row.effective_statement_date !==
-                                  row.statement_date && (
-                                  <span>
-                                    {" "}
-                                    · Extracted:{" "}
-                                    {row.statement_date ?? "Unknown"}
-                                  </span>
-                                )}
-                            </small>
-                          </td>
-                          <td
+                        <Fragment key={row.id}>
+                          <tr
                             className={
-                              !effective.transaction_date ? "unknown" : ""
+                              "entry-row" +
+                              (expandedId === row.id ? " expanded" : "")
                             }
+                            onClick={(event) => {
+                              if (
+                                !(event.target as HTMLElement).closest("button")
+                              )
+                                toggleRow(row.id);
+                            }}
                           >
-                            {effective.transaction_date ?? "Date unknown"}
-                            {effective.transaction_date !==
-                              row.transaction_date && (
+                            <td>
+                              <div className="entry-summary">
+                                <button
+                                  type="button"
+                                  id={"entry-toggle-" + row.id}
+                                  className="entry-toggle"
+                                  aria-label={
+                                    "Details for " + effective.description
+                                  }
+                                  aria-expanded={expandedId === row.id}
+                                  aria-controls={
+                                    expandedId === row.id
+                                      ? "entry-details-" + row.id
+                                      : undefined
+                                  }
+                                  disabled={saving}
+                                  onClick={() => toggleRow(row.id)}
+                                >
+                                  <span aria-hidden="true">
+                                    {expandedId === row.id ? "▾" : "▸"}
+                                  </span>
+                                </button>
+                                <div>
+                                  <strong
+                                    className="entry-description"
+                                    title={effective.description ?? undefined}
+                                  >
+                                    {effective.description}
+                                  </strong>
+                                  {effective.description !==
+                                    row.description && (
+                                    <small>Extracted: {row.description}</small>
+                                  )}
+                                  <small>
+                                    {row.needs_review
+                                      ? "● Needs review"
+                                      : "Selected source"}
+                                    {!row.is_selected && " · Candidate"}
+                                  </small>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <strong className="card-label">
+                                {row.card_label}
+                              </strong>
                               <small>
-                                Extracted: {row.transaction_date ?? "Unknown"}
+                                {(row.effective_statement_date === undefined
+                                  ? row.statement_date
+                                  : row.effective_statement_date) ??
+                                  "Statement date unknown"}
+                                {row.effective_statement_date !== undefined &&
+                                  row.effective_statement_date !==
+                                    row.statement_date && (
+                                    <span>
+                                      {" "}
+                                      · Extracted:{" "}
+                                      {row.statement_date ?? "Unknown"}
+                                    </span>
+                                  )}
                               </small>
-                            )}
-                          </td>
-                          <td>
-                            <span className={`type ${effective.entry_type}`}>
-                              {effective.entry_type}
-                            </span>
-                          </td>
-                          <td>
-                            {labelName(
-                              "account",
-                              row.account_id,
-                              row.account_name,
-                            )}
-                          </td>
-                          <td>
-                            {labelName(
-                              "category",
-                              row.category_id,
-                              row.category_name,
-                            )}
-                          </td>
-                          <td
-                            className={`amount ${effective.direction ?? "unknown"}`}
-                          >
-                            {formatAmount(
-                              effective.amount,
-                              effective.currency,
-                              effective.direction,
-                            )}
-                          </td>
-                          <td>
-                            <button
-                              className="evidence-link"
-                              aria-label="View evidence"
-                              aria-expanded={selected?.id === row.id}
-                              aria-controls={
-                                selected?.id === row.id
-                                  ? "source-evidence"
-                                  : undefined
+                            </td>
+                            <td
+                              className={
+                                !effective.transaction_date ? "unknown" : ""
                               }
-                              onClick={(event) => {
-                                evidenceTrigger.current = event.currentTarget;
-                                setSelected({ ...row });
-                              }}
                             >
-                              View ↗
-                            </button>
-                            <button
-                              type="button"
-                              aria-label="Edit entry"
-                              disabled={
-                                !row.is_selected ||
-                                labelStore.loading ||
-                                !!labelStore.error
-                              }
-                              onClick={(event) => {
-                                editTrigger.current = event.currentTarget;
-                                setReviewing(null);
-                                setEditing({ ...row });
-                              }}
+                              {effective.transaction_date ?? "Date unknown"}
+                              {effective.transaction_date !==
+                                row.transaction_date && (
+                                <small>
+                                  Extracted: {row.transaction_date ?? "Unknown"}
+                                </small>
+                              )}
+                            </td>
+                            <td>
+                              <span className={`type ${effective.entry_type}`}>
+                                {effective.entry_type}
+                              </span>
+                            </td>
+                            <td>
+                              {labelName(
+                                "account",
+                                row.account_id,
+                                row.account_name,
+                              )}
+                            </td>
+                            <td>
+                              {labelName(
+                                "category",
+                                row.category_id,
+                                row.category_name,
+                              )}
+                            </td>
+                            <td
+                              className={`amount ${effective.direction ?? "unknown"}`}
                             >
-                              Assign
-                            </button>
-                            <button
-                              type="button"
-                              aria-label="Review entry"
-                              disabled={
-                                !row.is_selected ||
-                                (!!api &&
-                                  row.effective_entry_type === undefined)
-                              }
-                              onClick={(event) => {
-                                reviewTrigger.current = event.currentTarget;
-                                setEditing(null);
-                                setReviewing({ ...row });
-                              }}
-                            >
-                              Review
-                            </button>
-                          </td>
-                        </tr>
+                              {formatAmount(
+                                effective.amount,
+                                effective.currency,
+                                effective.direction,
+                              )}
+                            </td>
+                          </tr>
+                          {expandedId === row.id && (
+                            <tr className="entry-detail-row">
+                              <td colSpan={7}>
+                                <div
+                                  id={"entry-details-" + row.id}
+                                  className="entry-details"
+                                  role="region"
+                                  aria-label={
+                                    "Details for " + effective.description
+                                  }
+                                >
+                                  <div
+                                    className="entry-actions"
+                                    role="group"
+                                    aria-label="Entry actions"
+                                  >
+                                    <button
+                                      type="button"
+                                      className="evidence-link"
+                                      aria-label="View evidence"
+                                      aria-pressed={selected?.id === row.id}
+                                      disabled={saving}
+                                      onClick={(event) => {
+                                        evidenceTrigger.current =
+                                          event.currentTarget;
+                                        setEditing(null);
+                                        setReviewing(null);
+                                        setNotice("");
+                                        setSelected({ ...row });
+                                      }}
+                                    >
+                                      View
+                                    </button>
+                                    <button
+                                      type="button"
+                                      aria-label="Edit entry"
+                                      aria-pressed={editing?.id === row.id}
+                                      disabled={
+                                        saving ||
+                                        !row.is_selected ||
+                                        labelStore.loading ||
+                                        !!labelStore.error
+                                      }
+                                      onClick={(event) => {
+                                        editTrigger.current =
+                                          event.currentTarget;
+                                        setReviewing(null);
+                                        setSelected(null);
+                                        setNotice("");
+                                        setEditing({ ...row });
+                                      }}
+                                    >
+                                      Assign
+                                    </button>
+                                    <button
+                                      type="button"
+                                      aria-label="Review entry"
+                                      aria-pressed={reviewing?.id === row.id}
+                                      disabled={
+                                        saving ||
+                                        !row.is_selected ||
+                                        (!!api &&
+                                          row.effective_entry_type ===
+                                            undefined)
+                                      }
+                                      onClick={(event) => {
+                                        reviewTrigger.current =
+                                          event.currentTarget;
+                                        setEditing(null);
+                                        setSelected(null);
+                                        setNotice("");
+                                        setReviewing({ ...row });
+                                      }}
+                                    >
+                                      Review
+                                    </button>
+                                  </div>
+                                  {notice && (
+                                    <p role="status" className="demo-notice">
+                                      {notice}
+                                    </p>
+                                  )}
+                                  {reviewing?.id === row.id && (
+                                    <ReviewEditor
+                                      key={reviewing.id}
+                                      row={reviewing}
+                                      onSave={(save) =>
+                                        saveEntry(() => saveReview(save))
+                                      }
+                                      onClose={() => {
+                                        setReviewing(null);
+                                        reviewTrigger.current?.focus({
+                                          preventScroll: true,
+                                        });
+                                      }}
+                                    />
+                                  )}
+                                  {editing?.id === row.id && (
+                                    <AssignmentEditor
+                                      key={editing.id}
+                                      row={editing}
+                                      labels={labelStore.labels}
+                                      onSave={(patch) =>
+                                        saveEntry(() => saveAssignments(patch))
+                                      }
+                                      onClose={() => {
+                                        setEditing(null);
+                                        editTrigger.current?.focus({
+                                          preventScroll: true,
+                                        });
+                                      }}
+                                    />
+                                  )}
+                                  {selected?.id === row.id && (
+                                    <Evidence
+                                      key={selected.id}
+                                      row={selected}
+                                      api={api}
+                                      onClose={() => {
+                                        setSelected(null);
+                                        evidenceTrigger.current?.focus({
+                                          preventScroll: true,
+                                        });
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
                       );
                     })}
                   </tbody>
@@ -642,7 +798,7 @@ export default function Workspace({
                     disabled={loading || offset === 0}
                     onClick={() => {
                       setOffset((n) => n - 50);
-                      setSelected(null);
+                      resetDetails();
                     }}
                   >
                     Previous
@@ -651,7 +807,7 @@ export default function Workspace({
                     disabled={loading || offset + 50 >= total}
                     onClick={() => {
                       setOffset((n) => n + 50);
-                      setSelected(null);
+                      resetDetails();
                     }}
                   >
                     Next
@@ -664,45 +820,13 @@ export default function Workspace({
               Accounts and Categories are independent. Assignments do not
               resolve source issues.
             </p>
-            {notice && (
-              <p role="status" className="demo-notice">
-                {notice}
-              </p>
-            )}
-            {reviewing && (
-              <ReviewEditor
-                key={reviewing.id}
-                row={reviewing}
-                onSave={saveReview}
-                onClose={() => {
-                  setReviewing(null);
-                  reviewTrigger.current?.focus();
-                }}
-              />
-            )}
-            {editing && (
-              <AssignmentEditor
-                key={editing.id}
-                row={editing}
-                labels={labelStore.labels}
-                onSave={saveAssignments}
-                onClose={() => {
-                  setEditing(null);
-                  editTrigger.current?.focus();
-                }}
-              />
-            )}
-            {selected && (
-              <Evidence
-                key={selected.id}
-                row={selected}
-                api={api}
-                onClose={() => {
-                  setSelected(null);
-                  evidenceTrigger.current?.focus();
-                }}
-              />
-            )}
+            {notice &&
+              !loading &&
+              !rows.some((row) => row.id === expandedId) && (
+                <p role="status" className="demo-notice">
+                  {notice}
+                </p>
+              )}
           </section>
         )}
       </main>

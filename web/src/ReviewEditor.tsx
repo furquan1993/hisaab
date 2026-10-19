@@ -37,7 +37,7 @@ export default function ReviewEditor({
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   useEffect(() => {
-    heading.current?.focus();
+    heading.current?.focus({ preventScroll: true });
   }, [row]);
   function original(field: ReviewField) {
     return field === "transaction_time"

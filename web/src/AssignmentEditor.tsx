@@ -23,7 +23,7 @@ export default function AssignmentEditor({
   const [error, setError] = useState("");
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    heading.current?.focus();
+    heading.current?.focus({ preventScroll: true });
   }, [row]);
   function options(kind: Label["kind"], current: string) {
     return labels

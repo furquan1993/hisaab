@@ -374,8 +374,90 @@ small {
   color: #8b988a;
   padding: 0 25px 17px;
 }
+.ledger[aria-label="Statement entries"] {
+  container-type: inline-size;
+}
 .table-scroll {
   overflow: auto;
+}
+.entry-row {
+  cursor: pointer;
+}
+.entry-row:hover,
+.entry-row.expanded {
+  background: #f3f7ef;
+}
+.entry-row > td {
+  padding: 10px 14px;
+}
+.entry-row > td:first-child {
+  padding-left: 16px;
+}
+.entry-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.entry-description {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.entry-toggle {
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+}
+.entry-detail-row > td:first-child {
+  padding: 0;
+  white-space: normal;
+  background: #f8faf6;
+}
+.entry-details {
+  /* Keep forms within the visible ledger, even when the table scrolls sideways.
+     https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/length#cqw */
+  width: 100cqw;
+  max-width: 100%;
+  position: sticky;
+  left: 0;
+  padding: 16px 24px;
+  font-size: 12px;
+}
+.entry-actions {
+  display: flex;
+  gap: 8px;
+}
+.entry-actions button {
+  border: 1px solid #dfe4de;
+  border-radius: 6px;
+  padding: 8px 14px;
+  background: white;
+  color: #53684e;
+  font-size: 11px;
+}
+.entry-actions button[aria-pressed="true"] {
+  background: #e7efdf;
+  border-color: #bfceb4;
+  color: #344c39;
+}
+.entry-details .evidence {
+  margin-top: 12px;
+  padding: 16px;
+}
+.entry-details .section-head button {
+  font-size: 12px;
+  line-height: 1.3;
+}
+.entry-details .decision-form {
+  padding: 16px 0 0;
+}
+.entry-details .demo-notice {
+  margin-top: 12px;
 }
 table {
   border-collapse: collapse;

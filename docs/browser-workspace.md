@@ -3,10 +3,11 @@
 React 19.3.1, TypeScript 7.0.2 and Vite 8.3.4 serve static assets only.
 Supabase JS 2.118.0 handles managed email/password Auth and the managed Data API.
 There is no custom data server, SSR, browser parser, money transfer or settlement
-calculation. The first hosted release remains read-only. The new implementation adds
-independent Account/Category management, versioned assignments, reasoned entry and
-statement review, and explicit parser-revision comparison. These changes require a
-separately reviewed and approved database rollout before live editing is available.
+calculation. The initial hosted release was read-only. The approved hosted database
+rollout is now complete through `0009_reasoned_review`, supporting independent
+Account/Category management, versioned assignments, reasoned entry and statement
+review, and explicit parser-revision comparison. Future database changes still
+require a separately reviewed and approved rollout.
 
 ## Try the synthetic demo now
 
@@ -22,6 +23,13 @@ Open http://127.0.0.1:5173/hisaab/ and choose **Explore synthetic demo**.
 No Auth account, database migration or financial upload is required for this
 mode. Every demo row is explicitly invented in `web/src/demo.ts`; there is no
 automatic fallback to demo rows after a live-query failure.
+
+In Statements, click a compact entry row or use its keyboard-accessible disclosure
+button to expand it. View, Assign and Review open directly beneath that row;
+only one row and one panel are open at a time. Closing a panel returns focus to
+its action, while saving returns focus to the row without jumping down the page.
+Changing filters, pages or workspace sections closes the expansion. Source facts
+and existing save/version checks are unchanged.
 
 The developer server serves static application assets, not financial data.
 Production needs only the static `web/dist` directory. Node 24 is used in CI.
@@ -49,10 +57,28 @@ build-time configuration, not a way to change a deployed bundle remotely.
 ## Operator rollout: only after review and explicit approval
 
 Implementation does **not** deploy migrations, grant hosted access or load
-real financial records automatically. Preserve the currently approved hosted revision;
-the first read-only rollout through 0003 and controlled-load checkpoint are complete.
-New revisions 0004 through 0009 are implementation changes, not permission to deploy.
-Back up, restore-check and obtain explicit rollout approval after code review; a
+real financial records automatically. The user explicitly approved all pending
+migrations, and the hosted database was upgraded from `0003_browser_queries` to
+`0009_reasoned_review` after the following checks:
+
+- Migration review, disposable PostgreSQL tests, real isolated Auth/API/browser
+  tests, frontend tests and a production build passed.
+- A private app-schema backup was checksummed and restored into a fresh isolated
+  PostgreSQL 17 database. All original rows and PDF bytes matched.
+- All six pending migrations passed rehearsal on that restored copy, with original
+  data unchanged and no ORM metadata drift.
+- The live upgrade committed transactionally. Revision, metadata, original-data
+  fingerprints, PDF integrity, RLS and API grants were verified.
+- Authenticated Account and Category creation/read checks passed in a transaction
+  that was rolled back, leaving no test labels in production.
+
+The private backup is `data/exports/run-csps1pet/database.dump`; its adjacent
+`manifest.json` records its checksum and source revision. The private verification
+record is `data/migration-rollout/verified-backup.json`. The archive is not encrypted
+and does not contain Supabase Auth; the backup boundary below still applies.
+
+Preserve the approved target for future deployments. Back up, restore-check and
+obtain explicit rollout approval after code review for future migrations; a
 successful synthetic demo alone is not deployment approval.
 
 1. In Supabase, disable public signups and anonymous sign-ins. Keep the **email

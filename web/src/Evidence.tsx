@@ -16,11 +16,10 @@ export default function Evidence({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
-  // Focus scrolls the selected evidence into view, including when it is below
-  // a long statement table. Reopening the same row refocuses without refetching.
-  // https://react.dev/reference/react/useRef#manipulating-the-dom-with-a-ref
+  // Inline panels receive keyboard focus without moving the reader's viewport.
+  // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/focus#preventscroll
   useEffect(() => {
-    heading.current?.focus();
+    heading.current?.focus({ preventScroll: true });
   }, [row]);
   useEffect(() => {
     setData(null);
