@@ -283,8 +283,11 @@ native recovery and parser/persistence regressions. CI runs both jobs separately
 
 ### Filter statement transactions
 
-In **Statements**, use **Account** and **Category** beside **Search descriptions**
-to narrow the transaction list. Choose a named label (including archived labels),
+In **Statements**, search descriptions in the **Transaction** column header and
+filter using the **Account** and **Category** column headers. The **Date** header
+contains transaction-date sorting; expand **Date options** there to change the
+date basis or enter a custom date range. Month navigation stays above the table.
+Choose a named label (including archived labels),
 **Unassigned**, or **All accounts / All categories** to remove that filter.
 Filters combine with each other, description search and the selected date view.
 They apply before pagination, so **Matching entries** counts every matching row.

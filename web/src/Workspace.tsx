@@ -934,116 +934,6 @@ export default function Workspace({
                     </button>
                   </div>
                 )}
-                <div className="date-range description-search">
-                  <label>
-                    Search descriptions
-                    <input
-                      type="search"
-                      maxLength={500}
-                      value={search}
-                      disabled={saving}
-                      onChange={(event) => {
-                        setSearch(event.target.value);
-                        setOffset(0);
-                        resetDetails();
-                      }}
-                    />
-                  </label>
-                </div>
-                <div className="date-range">
-                  {(["account", "category"] as const).map((kind) => (
-                    <label key={kind}>
-                      {kind === "account"
-                        ? "Filter by account"
-                        : "Filter by category"}
-                      <select
-                        aria-label={`Filter by ${kind}`}
-                        value={
-                          kind === "account" ? accountFilter : categoryFilter
-                        }
-                        disabled={saving || labelStore.loading}
-                        onChange={(event) => {
-                          if (kind === "account")
-                            setAccountFilter(event.target.value);
-                          else setCategoryFilter(event.target.value);
-                          setOffset(0);
-                          resetDetails();
-                        }}
-                      >
-                        <option value="">
-                          {kind === "account"
-                            ? "All accounts"
-                            : "All categories"}
-                        </option>
-                        <option value="unassigned">Unassigned</option>
-                        {labelStore.labels
-                          .filter((label) => label.kind === kind)
-                          .sort((a, b) => compareLabelNames(a.name, b.name))
-                          .map((label) => (
-                            <option key={label.id} value={label.id}>
-                              {label.name}
-                              {label.is_archived ? " (archived)" : ""}
-                            </option>
-                          ))}
-                      </select>
-                    </label>
-                  ))}
-                </div>
-                <div className="date-range">
-                  <label>
-                    Sort by transaction date
-                    <select
-                      aria-label="Sort by transaction date"
-                      value={dateSort}
-                      disabled={saving}
-                      onChange={(event) => {
-                        setDateSort(event.target.value as DateSort);
-                        setOffset(0);
-                        resetDetails();
-                      }}
-                    >
-                      <option value="newest">Newest first</option>
-                      <option value="oldest">Oldest first</option>
-                    </select>
-                  </label>
-                  <label>
-                    Filter dates
-                    <select
-                      aria-label="Filter dates"
-                      value={dateBasis}
-                      disabled={view === "review"}
-                      onChange={(event) => {
-                        setDateBasis(
-                          event.target.value as "original" | "reviewed",
-                        );
-                        setOffset(0);
-                        resetDetails();
-                      }}
-                    >
-                      <option value="original">Original extracted dates</option>
-                      <option value="reviewed">Reviewed dates</option>
-                    </select>
-                  </label>
-                  <label>
-                    From
-                    <input
-                      type="date"
-                      value={start}
-                      disabled={view === "review"}
-                      onChange={(e) => changeRange(e.target.value, true)}
-                    />
-                  </label>
-                  <span>→</span>
-                  <label>
-                    To
-                    <input
-                      type="date"
-                      value={end}
-                      disabled={view === "review"}
-                      onChange={(e) => changeRange(e.target.value, false)}
-                    />
-                  </label>
-                </div>
               </fieldset>
               <div
                 className="bulk-assignments"
@@ -1160,16 +1050,146 @@ export default function Workspace({
                 </p>
               )}
               <div className="table-scroll">
-                <table>
+                <table className="statement-table">
                   <thead>
                     <tr>
                       <th scope="col">Select</th>
-                      <th>Transaction</th>
-                      <th>Card & statement</th>
-                      <th>Date</th>
-                      <th>Type</th>
-                      <th>Account</th>
-                      <th>Category</th>
+                      <th scope="col" className="transaction-column">
+                        <div className="column-heading">
+                          <span>Transaction</span>
+                          <input
+                            aria-label="Search descriptions"
+                            placeholder="Search descriptions…"
+                            type="search"
+                            maxLength={500}
+                            value={search}
+                            disabled={saving}
+                            onChange={(event) => {
+                              setSearch(event.target.value);
+                              setOffset(0);
+                              resetDetails();
+                            }}
+                          />
+                        </div>
+                      </th>
+                      <th scope="col">Card & statement</th>
+                      <th
+                        scope="col"
+                        aria-sort={
+                          dateSort === "newest" ? "descending" : "ascending"
+                        }
+                      >
+                        <div className="column-heading">
+                          <span>Date</span>
+                          <select
+                            aria-label="Sort by transaction date"
+                            value={dateSort}
+                            disabled={saving}
+                            onChange={(event) => {
+                              setDateSort(event.target.value as DateSort);
+                              setOffset(0);
+                              resetDetails();
+                            }}
+                          >
+                            <option value="newest">Newest first</option>
+                            <option value="oldest">Oldest first</option>
+                          </select>
+                          <details className="column-date-range">
+                            <summary>Date options</summary>
+                            <div className="column-date-controls">
+                              <label>
+                                Filter dates
+                                <select
+                                  aria-label="Filter dates"
+                                  value={dateBasis}
+                                  disabled={saving || view === "review"}
+                                  onChange={(event) => {
+                                    setDateBasis(
+                                      event.target.value as
+                                        "original" | "reviewed",
+                                    );
+                                    setOffset(0);
+                                    resetDetails();
+                                  }}
+                                >
+                                  <option value="original">
+                                    Original extracted dates
+                                  </option>
+                                  <option value="reviewed">
+                                    Reviewed dates
+                                  </option>
+                                </select>
+                              </label>
+                              <label>
+                                From
+                                <input
+                                  type="date"
+                                  value={start}
+                                  disabled={saving || view === "review"}
+                                  onChange={(event) =>
+                                    changeRange(event.target.value, true)
+                                  }
+                                />
+                              </label>
+                              <label>
+                                To
+                                <input
+                                  type="date"
+                                  value={end}
+                                  disabled={saving || view === "review"}
+                                  onChange={(event) =>
+                                    changeRange(event.target.value, false)
+                                  }
+                                />
+                              </label>
+                            </div>
+                          </details>
+                        </div>
+                      </th>
+                      <th scope="col">Type</th>
+                      {(["account", "category"] as const).map((kind) => (
+                        <th scope="col" key={kind}>
+                          <div className="column-heading">
+                            <span>
+                              {kind === "account" ? "Account" : "Category"}
+                            </span>
+                            <select
+                              aria-label={`Filter by ${kind}`}
+                              value={
+                                kind === "account"
+                                  ? accountFilter
+                                  : categoryFilter
+                              }
+                              disabled={saving || labelStore.loading}
+                              onChange={(event) => {
+                                if (kind === "account")
+                                  setAccountFilter(event.target.value);
+                                else setCategoryFilter(event.target.value);
+                                setOffset(0);
+                                resetDetails();
+                              }}
+                            >
+                              <option value="">
+                                {kind === "account"
+                                  ? "All accounts"
+                                  : "All categories"}
+                              </option>
+                              <option value="unassigned">Unassigned</option>
+                              {labelStore.labels
+                                .filter((label) => label.kind === kind)
+                                .sort((a, b) =>
+                                  compareLabelNames(a.name, b.name),
+                                )
+                                .map((label) => (
+                                  <option key={label.id} value={label.id}>
+                                    {label.name}
+                                    {label.is_archived ? " (archived)" : ""}
+                                  </option>
+                                ))}
+                            </select>
+                          </div>
+                        </th>
+                      ))}
                       <th className="amount">Amount</th>
                     </tr>
                   </thead>

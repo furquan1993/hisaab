@@ -36,7 +36,7 @@ class BrowserE2ETests(SupabaseTests):
             session.flush()
             session.add(new_entry(candidate))
             session.commit()
-        self.run_frontend(("auth-smoke.mjs", "inline-smoke.mjs"))
+        self.run_frontend(("auth-smoke.mjs", "inline-smoke.mjs", "table-filters-smoke.mjs"))
 
     def run_frontend(self, scripts, *, port=5183):
         environment = os.environ.copy()

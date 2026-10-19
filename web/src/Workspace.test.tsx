@@ -23,6 +23,46 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
+it("places search, filters and sorting in their table column headers", async () => {
+  const user = userEvent.setup();
+  vi.mocked(readPage).mockResolvedValue({ rows: [demoEntries[0]], total: 1 });
+  render(
+    <Workspace
+      api={{} as BrowserClient}
+      owner="Owner"
+      initialRange={["2026-01-01", "2026-01-31"]}
+      onExit={() => {}}
+    />,
+  );
+  await screen.findByText(demoEntries[0].description);
+  for (const [name, column] of [
+    ["Search descriptions", "Transaction"],
+    ["Filter by account", "Account"],
+    ["Filter by category", "Category"],
+    ["Sort by transaction date", "Date"],
+    ["Filter dates", "Date"],
+    ["From", "Date"],
+    ["To", "Date"],
+  ]) {
+    expect(
+      screen.getByLabelText(name, { exact: true }).closest("th")?.textContent,
+    ).toContain(column);
+  }
+  const dateHeader = screen
+    .getByLabelText("Sort by transaction date")
+    .closest("th")!;
+  expect(dateHeader.getAttribute("aria-sort")).toBe("descending");
+  await user.selectOptions(
+    screen.getByLabelText("Sort by transaction date"),
+    "oldest",
+  );
+  expect(dateHeader.getAttribute("aria-sort")).toBe("ascending");
+  expect(
+    document.querySelector(
+      ".statement-filters input, .statement-filters select",
+    ),
+  ).toBeNull();
+});
 it("saves consecutive inline edits without reloading or replacing the list and preserves values on failure", async () => {
   const user = userEvent.setup();
   const row = {
