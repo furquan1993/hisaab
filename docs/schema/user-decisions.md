@@ -40,4 +40,4 @@ Revision APIs and explicit reparse CLI now have isolated PostgreSQL and actual A
 
 [Personal transaction descriptions](../friendly-descriptions.md) use independent,
 append-only snapshots and versions. They never change financial decision versions,
-merchant learning or settlement fingerprints. Hosted rollout is pending approval.
+merchant learning or settlement fingerprints. Hosted rollout completed on 2026-10-19.

@@ -301,3 +301,10 @@ sorting or pages change. Candidate sources cannot be selected. Saves use each
 transaction's expected version and run individually; a failure stops the batch.
 The result reports confirmed updates, which remain saved. Refresh before
 retrying an unconfirmed save, then select the remaining transactions again.
+
+## Friendly transaction descriptions
+
+The separately approved `0016_friendly_descriptions` rollout completed on 2026-10-19
+after a fresh private backup and verified restore rehearsal. Friendly descriptions
+use independent versions and preserve financial decisions and settlement checks.
+See [usage and verification](friendly-descriptions.md).

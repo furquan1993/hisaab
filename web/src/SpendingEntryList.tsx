@@ -56,6 +56,9 @@ export default function SpendingEntryList({
             )}
             <div className="spending-entry-info">
               <strong>{description}</strong>
+              {row.friendly_description && (
+                <small>Statement: {row.description}</small>
+              )}
               <div className="spending-entry-meta">
                 <time dateTime={values.transaction_date ?? undefined}>
                   {spendingDate(values.transaction_date)}

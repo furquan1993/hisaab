@@ -33,7 +33,7 @@ export default function SpendingAssignments({
     if (entryIds && !entryIds.includes(row.id)) return false;
     if (source === "ungrouped" && row.group_id) return false;
     if (source === "current" && row.group_id !== initialGroup) return false;
-    return `${row.friendly_description ?? reviewedValues(row).description} ${row.card_label} ${row.group_name ?? ""}`
+    return `${row.description} ${reviewedValues(row).description} ${row.friendly_description ?? ""} ${row.card_label} ${row.group_name ?? ""}`
       .toLocaleLowerCase()
       .includes(search.trim().toLocaleLowerCase());
   });
