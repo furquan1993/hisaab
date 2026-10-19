@@ -45,7 +45,8 @@ try {
     await page
       .getByRole("button", { name: "Reconciliation", exact: true })
       .click();
-    await page.getByLabel("Reconciliation month").fill(month);
+    await page.getByLabel("Reconciliation year").fill(month.slice(0, 4));
+    await page.getByLabel("Reconciliation month").selectOption(month.slice(5, 7));
     await page
       .getByRole("button", {
         name: "View cards for Synthetic funding (INR)",
@@ -68,7 +69,7 @@ try {
   let detail = await openFunding("2026-01");
   await page.getByText("Included entries · 2026-01", { exact: true }).click();
   await expect(
-    page.getByText(/SYNTHETIC SHOP · 2026-01-01 · purchase/),
+    page.getByRole("list", { name: "Included entries" }).getByText("SYNTHETIC SHOP", { exact: true }),
   ).toBeVisible();
   await detail.getByLabel("Partial contribution amount").fill("60");
   await detail

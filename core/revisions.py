@@ -64,6 +64,9 @@ def reparse_import(engine, owner_id, import_id, *, password="", password_provide
             parser_version=parsed.parser_version,
             extractor_version="hisaab-extraction-1/pdfplumber-" + version("pdfplumber"),
             schema_version=parsed.schema_version,
+            printed_balance=(
+                parsed.printed_balance.to_dict() if parsed.printed_balance else None
+            ),
             issues=issues,
         )
         session.add(candidate)

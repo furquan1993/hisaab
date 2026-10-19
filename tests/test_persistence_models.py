@@ -36,6 +36,7 @@ class ModelContractTests(unittest.TestCase):
                 "hisaab.import_reviews",
                 "hisaab.contributions",
                 "hisaab.funding_confirmations",
+                "hisaab.assignment_examples",
             },
         )
         configure_mappers()

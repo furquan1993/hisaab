@@ -63,12 +63,18 @@ data path; no custom app server or privileged browser credentials.
 Start with `cd web`, `npm ci`, then `npm run dev`. Open
 http://127.0.0.1:5173/hisaab/ and choose **Explore synthetic demo**.
 See [setup, security, deployment and verification](docs/browser-workspace.md).
-The approved hosted database rollout is complete through `0011_contributions`,
+The approved hosted database rollout is complete through `0014_statement_balances`,
 enabling Account/Category management, assignments, reasoned review, source revisions,
-monthly reconciliation and per-card contributions.
+monthly reconciliation, per-card contributions and separate printed bill balances.
 The rollout included a verified backup restore and migration rehearsal; original
 financial data was preserved. Future Auth/API migrations require separate reviewed
 rollout approval. Additional real financial loads remain gated.
+
+The **Summary** page distinguishes net spending from each statement's printed
+amount due. The approved balance rollout on 2026-10-19 captured two verified HDFC
+bill headers without changing transactions, assignments or selected sources.
+See [the dashboard rules](docs/summary-dashboard.md) and
+[rollout verification](tasks/statement-bill-summary.md).
 
 The monthly **Reconciliation** workspace now adds combined budget-account summaries
 with separate currencies and per-card full/partial contributions. Arrears retain
@@ -78,6 +84,14 @@ monthly charges. Migrations `0010_funding_totals` and `0011_contributions` have 
 applied to the hosted database after explicit approval, verified backup/restore,
 rehearsal and rollback-only live checks. Public frontend hosting remains a separate
 blocked rollout. See [reconciliation and contributions](docs/reconciliation.md).
+
+## Automatic assignments
+
+The [automatic assignment guide](docs/automatic-assignments.md) describes history
+training, independent account/category matching and correction learning. Migration
+`0013_auto_assignments` and the approved history training were deployed on 2026-10-19
+after verified backup/restore and rehearsal. Confident matches persist automatically;
+manual choices remain protected.
 
 ## Private database connection
 

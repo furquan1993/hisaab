@@ -70,6 +70,30 @@ export const entrySchema = z.object({
 export type Entry = z.infer<typeof entrySchema>;
 export type View = "statement" | "transaction" | "review";
 export type DateBasis = "original" | "reviewed";
+export type DateSort = "newest" | "oldest";
+
+export function sortEntries(rows: Entry[], order: DateSort) {
+  return [...rows].sort((a, b) => {
+    const first =
+      a.effective_transaction_date === undefined
+        ? a.transaction_date
+        : a.effective_transaction_date;
+    const second =
+      b.effective_transaction_date === undefined
+        ? b.transaction_date
+        : b.effective_transaction_date;
+    if (first === null && second !== null) return 1;
+    if (second === null && first !== null) return -1;
+    const dateOrder =
+      (first ?? "").localeCompare(second ?? "") * (order === "oldest" ? 1 : -1);
+    return (
+      dateOrder ||
+      a.import_id.localeCompare(b.import_id) ||
+      a.sequence - b.sequence ||
+      a.id.localeCompare(b.id)
+    );
+  });
+}
 
 export function filterEntries(
   rows: Entry[],

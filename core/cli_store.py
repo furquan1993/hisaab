@@ -70,6 +70,13 @@ def add_arguments(subparsers):
     command(
         "database-backup", "Create a private app-schema archive and migration manifest."
     )
+    training = command(
+        "assignment-train",
+        "Preview historical examples; --apply saves learning and assigns selected entries.",
+    )
+    training.add_argument("--owner", type=UUID, required=True)
+    training.add_argument("--apply", action="store_true")
+    training.add_argument("paths", nargs="+", type=Path)
     original = command(
         "original-export", "Export unchanged original PDF bytes privately."
     )
@@ -215,7 +222,20 @@ def _backup(engine, args, emit):
     return 0
 
 
+def _train(engine, args, emit):
+    from core.assignments import load_examples, history_summary, train_assignments
+
+    examples = load_examples(args.paths)
+    summary = (
+        train_assignments(engine, args.owner, examples)
+        if args.apply else history_summary(examples)
+    )
+    emit({"status": "trained" if args.apply else "preview", **summary})
+    return 0
+
+
 HANDLERS = {
+    "assignment-train": _train,
     "owner-create": _owner,
     "owner-auth-link": _auth_link,
     "owner-auth-unlink": _auth_link,
@@ -232,6 +252,8 @@ HANDLERS = {
 
 def run(args, emit):
     def action():
+        if args.command == "assignment-train" and not args.apply:
+            return _train(None, args, emit)
         engine = create_database_engine(load_config(args.config))
         try:
             return HANDLERS[args.command](engine, args, emit)

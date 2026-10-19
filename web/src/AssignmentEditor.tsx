@@ -1,3 +1,4 @@
+import { compareLabelNames } from "./label-order";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Entry } from "./domain";
 import type { Label } from "./useLabels";
@@ -28,7 +29,7 @@ export default function AssignmentEditor({
   function options(kind: Label["kind"], current: string) {
     return labels
       .filter((l) => l.kind === kind && (!l.is_archived || l.id === current))
-      .sort((a, b) => a.name.localeCompare(b.name))
+      .sort((a, b) => compareLabelNames(a.name, b.name))
       .map((l) => (
         <option key={l.id} value={l.id}>
           {l.name}

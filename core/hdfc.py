@@ -14,6 +14,7 @@ from decimal import Decimal
 from core.extraction import Page, ParseError
 from core.layout import Line, Table, lines, tables
 from core.models import Direction, EntryType, Issue, Source, Statement, Transaction
+from core.statement_balance import parse_hdfc_balance
 
 DATE = re.compile(r"\d{2}/\d{2}/\d{4}")
 TIME = re.compile(r"\d{2}:\d{2}")
@@ -267,4 +268,5 @@ def parse_pages(
         statement_date=statement_date,
         transactions=tuple(transactions),
         issues=tuple(issues),
+        printed_balance=parse_hdfc_balance(pages[0]),
     )

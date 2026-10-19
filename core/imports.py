@@ -125,6 +125,9 @@ def _persist(session, owner_id, card_id, data, parsed):
         parser_version=parsed.parser_version,
         extractor_version="hisaab-extraction-1/pdfplumber-" + version("pdfplumber"),
         schema_version=parsed.schema_version,
+        printed_balance=(
+            parsed.printed_balance.to_dict() if parsed.printed_balance else None
+        ),
         issues=[asdict(issue) for issue in parsed.issues] + extra_issues,
     )
     session.add(imported)

@@ -1,6 +1,8 @@
 # User decisions alongside immutable evidence
 
-The approved hosted database rollout is complete through `0011_contributions`.
+The approved hosted database rollout is complete through `0013_auto_assignments`.
+The approved automatic-assignment rollout preserved all prior decisions and financial
+records; see [history training and correction learning](../automatic-assignments.md).
 Future migrations require separate review and rollout approval.
 
 The original five evidence entities remain intact. New owner-scoped sidecars hold Categories, funding Accounts, current entry decisions and append-only decision events. Accounts are budget/funding pots, never aliases for credit cards. The two label kinds are independently managed and assigned.

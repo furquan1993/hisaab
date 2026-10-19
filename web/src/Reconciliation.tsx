@@ -1,3 +1,4 @@
+import { compareLabelNames } from "./label-order";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { BrowserClient } from "./client";
 import type { Entry } from "./domain";
@@ -51,6 +52,13 @@ export default function Reconciliation({
     [loading, setLoading] = useState(!!api),
     [error, setError] = useState("");
   const [loadedMonth, setLoadedMonth] = useState("");
+  const [year, setYear] = useState(month.slice(0, 4));
+  useEffect(() => setYear(month.slice(0, 4)), [month]);
+  function changeMonth(next: string) {
+    onMonth(next);
+    setActive(null);
+    setExpanded(null);
+  }
   const [refresh, setRefresh] = useState(0),
     [expanded, setExpanded] = useState<string | null>(null),
     [active, setActive] = useState<
@@ -151,19 +159,52 @@ export default function Reconciliation({
       <div className="form-actions">
         <label className="funding-label">
           Reconciliation month
-          <input
+          <select
             aria-label="Reconciliation month"
-            type="month"
+            value={month.slice(5, 7)}
+            disabled={locked}
+            onChange={(e) =>
+              changeMonth(`${month.slice(0, 4)}-${e.target.value}`)
+            }
+          >
+            {[
+              "January",
+              "February",
+              "March",
+              "April",
+              "May",
+              "June",
+              "July",
+              "August",
+              "September",
+              "October",
+              "November",
+              "December",
+            ].map((name, index) => (
+              <option key={name} value={String(index + 1).padStart(2, "0")}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="funding-label">
+          Reconciliation year
+          <input
+            aria-label="Reconciliation year"
+            type="number"
+            min="1"
+            max="9999"
             required
-            value={month}
+            value={year}
             disabled={locked}
             onChange={(e) => {
-              if (/^\d{4}-\d{2}$/.test(e.target.value)) {
-                onMonth(e.target.value);
-                setActive(null);
-                setExpanded(null);
+              const next = e.target.value;
+              setYear(next);
+              if (/^\d{4}$/.test(next) && Number(next) > 0) {
+                changeMonth(`${next}-${month.slice(5, 7)}`);
               }
             }}
+            onBlur={() => setYear(month.slice(0, 4))}
           />
         </label>
         <button
@@ -223,7 +264,7 @@ export default function Reconciliation({
               {[...summaries]
                 .sort(
                   (a, b) =>
-                    a[1].account.localeCompare(b[1].account) ||
+                    compareLabelNames(a[1].account, b[1].account) ||
                     (a[1].currency ?? "").localeCompare(b[1].currency ?? ""),
                 )
                 .map(([key, summary]) => {

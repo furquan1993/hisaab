@@ -6,6 +6,7 @@ A fresh checkout skips them and still runs the synthetic encrypted-PDF tests.
 
 import json
 import unittest
+from decimal import Decimal
 from pathlib import Path
 
 from core.parser import parse_probe
@@ -21,7 +22,14 @@ class PrivateHdfcTests(unittest.TestCase):
         statement = parse_probe(ROOT / sample["probe"])
         result = statement.to_dict()
         self.assertEqual(result["statement_date"], sample["statement_date"])
-        self.assertEqual(result["totals"], sample["totals"])
+        # Historical reference totals include repayments; source rows stay intact.
+        totals = {currency: dict(values) for currency, values in sample["totals"].items()}
+        for row in sample["rows"]:
+            if row[6] == "payment":
+                totals["INR"][row[4]] = format(
+                    Decimal(totals["INR"][row[4]]) - Decimal(row[3]), ".2f"
+                )
+        self.assertEqual(result["totals"], totals)
         self.assertEqual(result["unresolved_amount_count"], 0)
         self.assertEqual(result["issues"], [])
         self.assertEqual(len(result["transactions"]), len(sample["rows"]))

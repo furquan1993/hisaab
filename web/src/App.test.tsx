@@ -78,31 +78,65 @@ it("saves independent entry assignments without clearing a source issue", async 
   await user.click(screen.getByRole("button", { name: "Create Category" }));
   await user.click(screen.getByRole("button", { name: "Statements" }));
   await user.click(screen.getByRole("tab", { name: "Needs review" }));
-  const details = await expandRow(user, "Credit • purpose unclear");
-  await user.click(details.getByRole("button", { name: "Edit entry" }));
+  const account = screen.getByLabelText("Account for Credit • purpose unclear");
   await user.selectOptions(
-    screen.getByLabelText("Account"),
-    screen.getByRole("option", { name: "Household pot" }),
+    account,
+    within(account).getByRole("option", { name: "Household pot" }),
+  );
+  const category = screen.getByLabelText(
+    "Category for Credit • purpose unclear",
   );
   await user.selectOptions(
-    screen.getByLabelText("Category"),
-    screen.getByRole("option", { name: "Miscellaneous" }),
+    category,
+    within(category).getByRole("option", { name: "Miscellaneous" }),
   );
-  await user.click(screen.getByRole("button", { name: "Save assignments" }));
   const saved = screen.getByText("Credit • purpose unclear").closest("tr")!;
-  expect(within(saved).getByText("Household pot")).toBeTruthy();
-  expect(within(saved).getByText("Miscellaneous")).toBeTruthy();
   expect(within(saved).getByText("● Needs review")).toBeTruthy();
-  const savedDetails = within(saved.nextElementSibling as HTMLElement);
-  expect(savedDetails.getByRole("status").textContent).toContain(
-    "Assignments saved",
+  expect(within(saved).getByRole("button").getAttribute("aria-expanded")).toBe(
+    "false",
   );
+  expect(
+    (
+      screen.getByLabelText(
+        "Account for Credit • purpose unclear",
+      ) as HTMLSelectElement
+    ).selectedOptions[0].textContent,
+  ).toBe("Household pot");
   await waitFor(() =>
-    expect(document.activeElement).toBe(within(saved).getByRole("button")),
+    expect(document.activeElement).toBe(
+      screen.getByLabelText("Category for Credit • purpose unclear"),
+    ),
   );
   await user.click(screen.getByRole("tab", { name: "Statement date" }));
   const persisted = screen.getByText("Credit • purpose unclear").closest("tr")!;
-  expect(within(persisted).getByText("Household pot")).toBeTruthy();
+  expect(
+    (
+      within(persisted).getByRole("combobox", {
+        name: "Account for Credit • purpose unclear",
+      }) as HTMLSelectElement
+    ).selectedOptions[0].textContent,
+  ).toBe("Household pot");
+  const persistedCategory = within(persisted).getByRole("combobox", {
+    name: "Category for Credit • purpose unclear",
+  });
+  expect(
+    (persistedCategory as HTMLSelectElement).selectedOptions[0].textContent,
+  ).toBe("Miscellaneous");
+  await user.selectOptions(persistedCategory, "");
+  expect(
+    (
+      screen.getByLabelText(
+        "Category for Credit • purpose unclear",
+      ) as HTMLSelectElement
+    ).value,
+  ).toBe("");
+  expect(
+    (
+      screen.getByLabelText(
+        "Account for Credit • purpose unclear",
+      ) as HTMLSelectElement
+    ).selectedOptions[0].textContent,
+  ).toBe("Household pot");
 });
 it("reviews and rejects a candidate import without replacing published entries", async () => {
   const user = userEvent.setup();

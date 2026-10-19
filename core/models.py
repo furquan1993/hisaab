@@ -10,6 +10,10 @@ from dataclasses import asdict, dataclass
 from datetime import date, time
 from decimal import Decimal
 from enum import StrEnum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core.statement_balance import PrintedBalance
 
 PARSER_VERSION = "hdfc-0.1.0"
 
@@ -85,6 +89,7 @@ class Statement:
     bank: str = "hdfc"
     parser_version: str = PARSER_VERSION
     schema_version: int = 1
+    printed_balance: "PrintedBalance | None" = None
 
     @property
     def needs_review(self) -> bool:
@@ -100,8 +105,9 @@ class Statement:
 
         data = json.loads(json.dumps(asdict(self), default=encode))
         data["status"] = "needs_review" if self.needs_review else "parsed"
-        # Totals include only rows with a known amount AND direction, and never
-        # pretend a multi-currency sum has financial meaning.
+        # Card repayments settle the bill rather than change spending. Keep
+        # their rows, but exclude them from the per-currency transaction totals.
+        # Only known amounts AND directions contribute to these totals.
         currencies = sorted({r.currency for r in self.transactions if r.currency})
         data["totals"] = {
             currency: {
@@ -111,6 +117,7 @@ class Statement:
                             r.amount
                             for r in self.transactions
                             if r.currency == currency
+                            and r.entry_type != EntryType.PAYMENT
                             and r.direction == direction
                             and r.amount is not None
                         ),

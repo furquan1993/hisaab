@@ -26,6 +26,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
+from core.persistence.assignments import AssignmentExample
 from core.persistence.base import SCHEMA, Base, CreatedAt, Identity, Owned
 from core.persistence.decisions import (
     Category,
@@ -39,6 +40,7 @@ from core.persistence.revisions import EntryLink, ParserRevision
 
 __all__ = [
     "Base",
+    "AssignmentExample",
     "Card",
     "Category",
     "Contribution",
@@ -213,6 +215,10 @@ class ImportRecord(Identity, CreatedAt, Owned, Base):
     schema_version: Mapped[int] = mapped_column(Integer, default=1)
     review_status: Mapped[str] = mapped_column(String(16), default="pending")
     issues: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    # Printed bill facts are independent of transaction-derived spending.
+    printed_balance: Mapped[dict | None] = mapped_column(
+        JSON(none_as_null=True), nullable=True
+    )
     entries: Mapped[list["Entry"]] = relationship(viewonly=True, lazy="raise")
 
 

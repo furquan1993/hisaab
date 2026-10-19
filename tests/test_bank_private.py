@@ -9,6 +9,7 @@ import os
 import re
 import shlex
 import unittest
+from decimal import Decimal
 from pathlib import Path
 
 from core.parser import parse_pdf
@@ -58,9 +59,18 @@ class PrivateBankTests(unittest.TestCase):
             data["statement_date"] == reference["statement_date"],
             "Statement date mismatch",
         )
-        self.assertTrue(
-            data["totals"] == reference["totals"], "Direction-separated totals mismatch"
-        )
+        # Historical reference totals include repayments; source rows stay intact.
+        totals = {
+            currency: dict(values) for currency, values in reference["totals"].items()
+        }
+        for row in reference["transactions"]:
+            if row["entry_type"] == "payment" and row["amount"] is not None:
+                values = totals[row["currency"]]
+                direction = row["direction"]
+                values[direction] = format(
+                    Decimal(values[direction]) - Decimal(row["amount"]), ".2f"
+                )
+        self.assertTrue(data["totals"] == totals, "Direction-separated totals mismatch")
         self.assertEqual(len(data["transactions"]), len(reference["transactions"]))
         for index, (actual, expected) in enumerate(
             zip(data["transactions"], reference["transactions"]), start=1

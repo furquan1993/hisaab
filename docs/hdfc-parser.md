@@ -42,6 +42,15 @@ PDF bytes and passwords are handled in memory; no decrypted PDF is written. The 
 
 The envelope includes `schema_version`, `parser_version`, `bank`, `source_name`, `source_sha256`, `input_kind`, `page_count`, nullable `statement_date`, ordered `transactions`, statement-level `issues`, `status`, `totals`, and `unresolved_amount_count`.
 
+Per-currency debit/credit totals exclude card repayments (`entry_type: payment`). Payment rows remain in `transactions` for inspection; refunds, cashback, and reversals still contribute to totals.
+
+`printed_balance` is separate, nullable source evidence from the observed HDFC
+five-column bill header. It records currency, previous balance, payments/credits,
+charges, finance charges and the printed amount due, with page/bounding box/text
+provenance. It never changes transaction totals. Unsupported or ambiguous headers
+produce `null`; differences between the header arithmetic and printed due are
+displayed without guessing their cause.
+
 Each transaction contains:
 
 | Field | Meaning |

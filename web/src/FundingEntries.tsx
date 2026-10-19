@@ -110,40 +110,73 @@ export default function FundingEntries({
         <>
           {loading && <p role="status">Loading included entries…</p>}
           {error && <p role="alert">{error}</p>}
-          <ul>
+          {!loading && !error && !rows.length && (
+            <p className="funding-entries-empty">No included entries.</p>
+          )}
+          <ul className="funding-entry-list" aria-label="Included entries">
             {rows.map((r) => (
               <li key={r.id}>
-                {r.effective_description} ·{" "}
-                {r.effective_transaction_date ?? "Date unknown"} ·{" "}
-                {r.effective_entry_type} ·{" "}
-                {formatAmount(
-                  r.effective_amount,
-                  group.currency,
-                  r.effective_direction,
-                )}
+                <div className="funding-entry-info">
+                  <span className="funding-entry-description">
+                    {r.effective_description}
+                  </span>
+                  <span className="funding-entry-meta">
+                    {r.effective_transaction_date ? (
+                      <time dateTime={r.effective_transaction_date}>
+                        {new Intl.DateTimeFormat("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                          timeZone: "UTC",
+                        }).format(new Date(r.effective_transaction_date))}
+                      </time>
+                    ) : (
+                      "Date unknown"
+                    )}
+                    <span className="funding-entry-type">
+                      {r.effective_entry_type.replaceAll("_", " ")}
+                    </span>
+                  </span>
+                </div>
+                <span
+                  className={`funding-entry-amount ${r.effective_direction ?? ""}`}
+                >
+                  {formatAmount(
+                    r.effective_amount,
+                    group.currency,
+                    r.effective_direction,
+                  )}
+                </span>
               </li>
             ))}
           </ul>
-          <div className="form-actions">
-            <span>
-              {total ? offset + 1 : 0}–{Math.min(offset + rows.length, total)}{" "}
-              of {total}
-            </span>
-            <button
-              type="button"
-              disabled={loading || !offset}
-              onClick={() => setOffset((n) => n - 50)}
-            >
-              Previous entries
-            </button>
-            <button
-              type="button"
-              disabled={loading || offset + 50 >= total}
-              onClick={() => setOffset((n) => n + 50)}
-            >
-              Next entries
-            </button>
-          </div>
+          {!loading && !error && total > 0 && (
+            <div className="form-actions funding-entries-pagination">
+              <span>
+                {total <= 50
+                  ? `${total} ${total === 1 ? "entry" : "entries"}`
+                  : `${offset + 1}–${Math.min(offset + rows.length, total)} of ${total}`}
+              </span>
+              {total > 50 && (
+                <>
+                  <button
+                    type="button"
+                    disabled={loading || !offset}
+                    onClick={() => setOffset((n) => n - 50)}
+                  >
+                    Previous entries
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading || offset + 50 >= total}
+                    onClick={() => setOffset((n) => n + 50)}
+                  >
+                    Next entries
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </>
       )}
     </details>

@@ -78,3 +78,39 @@ class ModelTests(unittest.TestCase):
         data = Statement("x", "a", "probe", 1, None, rows).to_dict()
         self.assertEqual(data["totals"]["USD"]["debit"], "2.00")
         self.assertEqual(data["totals"]["INR"]["debit"], "123.45")
+
+    def test_payments_are_preserved_but_excluded_from_transaction_totals(self):
+        rows = (
+            transaction(),
+            transaction(
+                sequence=2, entry_type=EntryType.PAYMENT,
+                direction=Direction.CREDIT, amount=Decimal("500.00"),
+            ),
+            transaction(
+                sequence=3, entry_type=EntryType.REFUND,
+                direction=Direction.CREDIT, amount=Decimal("10.25"),
+            ),
+            transaction(
+                sequence=4, entry_type=EntryType.CASHBACK,
+                direction=Direction.CREDIT, amount=Decimal("2.10"),
+            ),
+            transaction(
+                sequence=5, entry_type=EntryType.PAYMENT,
+                direction=Direction.DEBIT, amount=Decimal("50.00"),
+            ),
+            transaction(
+                sequence=6, entry_type=EntryType.PAYMENT,
+                direction=Direction.CREDIT, currency="USD",
+            ),
+        )
+        data = Statement("x", "a", "probe", 1, None, rows).to_dict()
+        self.assertEqual(
+            data["totals"],
+            {
+                "INR": {"debit": "123.45", "credit": "12.35"},
+                "USD": {"debit": "0.00", "credit": "0.00"},
+            },
+        )
+        self.assertEqual(len(data["transactions"]), len(rows))
+        self.assertEqual(data["transactions"][1]["amount"], "500.00")
+        self.assertEqual(data["transactions"][1]["entry_type"], "payment")

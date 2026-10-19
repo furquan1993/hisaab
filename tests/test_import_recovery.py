@@ -19,6 +19,7 @@ from core.backup import backup_database
 from core.imports import import_pdf
 from core.persistence.models import (
     Base,
+    AssignmentExample,
     Contribution,
     FundingAccount,
     FundingConfirmation,
@@ -56,6 +57,11 @@ class ImportRecoveryTests(ImportTestsBase):
             account = FundingAccount(owner_id=self.owner, name="Synthetic recovery pot")
             session.add(account)
             session.flush()
+            session.add(AssignmentExample(
+                owner_id=self.owner, source_key="synthetic-recovery-history",
+                merchant_key="synthetic recovery shop", direction="debit",
+                kind="account", is_manual=False, account_id=account.id,
+            ))
             actor = uuid4()
             scope = dict(
                 owner_id=self.owner,

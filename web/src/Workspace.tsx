@@ -1,14 +1,19 @@
+import { compareLabelNames } from "./label-order";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { readPage, type BrowserClient } from "./client";
 import { demoEntries } from "./demo";
 import {
   filterEntries,
+  sortEntries,
+  type DateSort,
   formatAmount,
   monthRange,
   type Entry,
   type View,
 } from "./domain";
 import Reconciliation from "./Reconciliation";
+import Summary from "./Summary";
+import { assignEntries } from "./auto-assignments";
 import type { Confirmation, Contribution } from "./funding-domain";
 import Evidence from "./Evidence";
 import Labels from "./Labels";
@@ -39,26 +44,37 @@ export default function Workspace({
   onExit: () => void;
 }) {
   const [section, setSection] = useState<
-    "statements" | "account" | "category" | "imports" | "reconciliation"
+    | "summary"
+    | "statements"
+    | "account"
+    | "category"
+    | "imports"
+    | "reconciliation"
   >("statements");
   const labelStore = useLabels(api, ownerId);
   const [fundingMonth, setFundingMonth] = useState(initialRange[0].slice(0, 7));
   const [fundingBusy, setFundingBusy] = useState(false);
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [confirmations, setConfirmations] = useState<Confirmation[]>([]);
-  const [demoRows, setDemoRows] = useState(() =>
-    demoEntries.map((row) => ({ ...row })),
-  );
+  const demoRows = useRef(demoEntries.map((row) => ({ ...row })));
+  function setDemoRows(update: (current: Entry[]) => Entry[]) {
+    setLoading(true);
+    demoRows.current = update(demoRows.current);
+    setRefresh((n) => n + 1);
+  }
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [assignmentError, setAssignmentError] = useState("");
   const pendingFocus = useRef<string | null>(null);
   const [editing, setEditing] = useState<Entry | null>(null);
   const [reviewing, setReviewing] = useState<Entry | null>(null);
   const reviewTrigger = useRef<HTMLButtonElement | null>(null);
   const [notice, setNotice] = useState("");
+  const [autoAssignmentNotice, setAutoAssignmentNotice] = useState("");
   const editTrigger = useRef<HTMLButtonElement | null>(null);
   const ledgerHeading = useRef<HTMLHeadingElement | null>(null);
   const [view, setView] = useState<View>("statement");
+  const [dateSort, setDateSort] = useState<DateSort>("newest");
   const [dateBasis, setDateBasis] = useState<"original" | "reviewed">(
     "original",
   );
@@ -77,21 +93,65 @@ export default function Workspace({
     const controller = new AbortController();
     setRows([]);
     setTotal(0);
+    setAutoAssignmentNotice("");
     setError("");
     setLoading(true);
     if (view !== "review" && invalid) {
       setLoading(false);
       return;
     }
-    const filtered = filterEntries(demoRows, view, start, end, dateBasis);
+    const filtered = sortEntries(
+      filterEntries(demoRows.current, view, start, end, dateBasis),
+      dateSort,
+    );
     const promise = api
-      ? readPage(api, view, start, end, offset, controller.signal, dateBasis)
+      ? readPage(
+          api,
+          view,
+          start,
+          end,
+          offset,
+          controller.signal,
+          dateBasis,
+          dateSort,
+        )
       : Promise.resolve({
           rows: filtered.slice(offset, offset + 50),
           total: filtered.length,
         });
     promise
-      .then((page) => {
+      .then(async (loaded) => {
+        let page = loaded;
+        if (api && ownerId && !controller.signal.aborted) {
+          try {
+            const assigned = await assignEntries(
+              api,
+              ownerId,
+              loaded.rows,
+              controller.signal,
+            );
+            if (assigned > 0 && !controller.signal.aborted) {
+              page = await readPage(
+                api,
+                view,
+                start,
+                end,
+                offset,
+                controller.signal,
+                dateBasis,
+                dateSort,
+              );
+              labelStore.reload();
+            }
+          } catch (error) {
+            if (!controller.signal.aborted)
+              setAutoAssignmentNotice(
+                error instanceof Error
+                  ? error.message
+                  : "Automatic assignments could not be confirmed. Reload to retry.",
+              );
+          }
+        }
         if (!controller.signal.aborted) {
           setRows(page.rows);
           setTotal(page.total);
@@ -107,15 +167,24 @@ export default function Workspace({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [api, view, start, end, offset, invalid, refresh, demoRows, dateBasis]);
+  }, [
+    api,
+    ownerId,
+    view,
+    start,
+    end,
+    offset,
+    invalid,
+    refresh,
+    dateBasis,
+    dateSort,
+  ]);
   useEffect(() => {
-    if (loading || !pendingFocus.current) return;
-    const toggle = document.getElementById(
-      "entry-toggle-" + pendingFocus.current,
-    );
+    if (loading || saving || !pendingFocus.current) return;
+    const toggle = document.getElementById(pendingFocus.current);
     (toggle ?? ledgerHeading.current)?.focus({ preventScroll: true });
     pendingFocus.current = null;
-  }, [loading, rows]);
+  }, [loading, rows, saving]);
   function resetDetails() {
     setExpandedId(null);
     setSelected(null);
@@ -223,6 +292,7 @@ export default function Workspace({
             ? "The entry or source changed. Your draft is kept; close and refresh before reviewing the latest values."
             : "Could not confirm the review. Check the values and reload before retrying.",
         );
+      setLoading(true);
       setRefresh((n) => n + 1);
     } else
       setDemoRows((current) =>
@@ -232,55 +302,133 @@ export default function Workspace({
             : row,
         ),
       );
-    pendingFocus.current = reviewing.id;
+    pendingFocus.current = "entry-toggle-" + reviewing.id;
     setReviewing(null);
     setNotice("Review saved. Original facts and flags are preserved.");
   }
-  async function saveAssignments(patch: AssignmentPatch) {
-    if (!editing) return;
+  async function saveAssignments(
+    patch: Partial<AssignmentPatch>,
+    entry = editing,
+    focusId?: string,
+  ) {
+    if (!entry) return;
+    let assignments = patch;
+    let version = entry.decision_version + 1;
     if (api) {
-      const { error } = await api.rpc("save_entry_decision", {
-        p_entry_id: editing.id,
-        p_expected_version: editing.decision_version,
+      const { data, error } = await api.rpc("save_entry_decision", {
+        p_entry_id: entry.id,
+        p_expected_version: entry.decision_version,
         p_patch: patch,
       });
       if (error)
         throw new Error(
           error.code === "PT409"
-            ? "This entry changed. Cancel, refresh, and review the latest values before saving. Your draft has not overwritten them."
+            ? "This entry changed. Refresh and review the latest values before saving. Your changes have not overwritten them."
             : "Could not confirm the save. Reload before retrying.",
         );
-      setRefresh((n) => n + 1);
-    } else {
-      setDemoRows((current) =>
-        current.map((row) =>
-          (row.logical_entry_id ?? row.id) ===
-          (editing.logical_entry_id ?? editing.id)
-            ? { ...row, ...patch, decision_version: row.decision_version + 1 }
-            : row,
-        ),
-      );
+      assignments = {
+        account_id: data.account_id,
+        category_id: data.category_id,
+      };
+      version = data.version;
     }
-    pendingFocus.current = editing.id;
+    const update = (current: Entry[]) =>
+      current.map((row) => {
+        if (
+          (row.logical_entry_id ?? row.id) !==
+          (entry.logical_entry_id ?? entry.id)
+        )
+          return row;
+        const next = { ...row, ...assignments, decision_version: version };
+        for (const kind of ["account", "category"] as const) {
+          const field = kind === "account" ? "account_id" : "category_id";
+          if (field in assignments)
+            next[`${kind}_name`] =
+              labelStore.labels.find(
+                (label) => label.kind === kind && label.id === next[field],
+              )?.name ?? null;
+        }
+        return next;
+      });
+    if (!api) demoRows.current = update(demoRows.current);
+    setRows(update);
+    pendingFocus.current = focusId ?? "entry-toggle-" + entry.id;
     setEditing(null);
     setNotice(
       "Assignments saved. Source facts and review issues are unchanged.",
     );
   }
-  function labelName(
-    kind: "account" | "category",
-    id: string | null,
-    fallback: string | null,
-  ) {
+  function assignmentSelect(row: Entry, kind: "account" | "category") {
+    const field = kind === "account" ? "account_id" : "category_id";
+    const current = row[field] ?? "";
+    const id = `entry-${kind}-${row.id}`;
     return (
-      labelStore.labels.find((label) => label.kind === kind && label.id === id)
-        ?.name ??
-      fallback ??
-      "Unassigned"
+      <select
+        id={id}
+        className="inline-assignment"
+        aria-label={`${kind === "account" ? "Account" : "Category"} for ${reviewedValues(row).description}`}
+        value={current}
+        disabled={
+          saving ||
+          !!editing ||
+          !!reviewing ||
+          !row.is_selected ||
+          labelStore.loading ||
+          !!labelStore.error
+        }
+        onChange={(event) => {
+          const value = event.target.value || null;
+          setAssignmentError("");
+          void saveEntry(() =>
+            saveAssignments({ [field]: value }, row, id),
+          ).catch((error: unknown) =>
+            setAssignmentError(
+              error instanceof Error
+                ? error.message
+                : "Could not save the assignment. Reload before retrying.",
+            ),
+          );
+        }}
+      >
+        <option value="">Unassigned</option>
+        {labelStore.labels
+          .filter(
+            (label) =>
+              label.kind === kind &&
+              (!label.is_archived || label.id === current),
+          )
+          .sort((a, b) => compareLabelNames(a.name, b.name))
+          .map((label) => (
+            <option key={label.id} value={label.id}>
+              {label.name}
+              {label.is_archived ? " (archived)" : ""}
+            </option>
+          ))}
+      </select>
     );
   }
   function changeView(next: View) {
     setView(next);
+    setOffset(0);
+    resetDetails();
+  }
+  const monthDate = start ? new Date(start + "T00:00:00Z") : null;
+  const monthLabel =
+    monthDate && !Number.isNaN(monthDate.getTime())
+      ? new Intl.DateTimeFormat("en", {
+          month: "long",
+          year: "numeric",
+          timeZone: "UTC",
+        }).format(monthDate)
+      : "Choose a date";
+  function changeMonth(direction: -1 | 1) {
+    if (!monthDate || Number.isNaN(monthDate.getTime())) return;
+    const target = new Date(monthDate);
+    target.setUTCDate(1);
+    target.setUTCMonth(target.getUTCMonth() + direction);
+    const [first, last] = monthRange(target.toISOString().slice(0, 10));
+    setStart(first);
+    setEnd(last);
     setOffset(0);
     resetDetails();
   }
@@ -300,6 +448,7 @@ export default function Workspace({
         <p className="nav-caption">WORKSPACE</p>
         {(
           [
+            ["summary", "Summary"],
             ["statements", "Statements"],
             ["reconciliation", "Reconciliation"],
             ["account", "Accounts"],
@@ -340,25 +489,56 @@ export default function Workspace({
           <span>
             Workspace <span className="crumb">/</span>{" "}
             <strong>
-              {section === "statements"
-                ? "Statements"
-                : section === "reconciliation"
-                  ? "Reconciliation"
-                  : section === "account"
-                    ? "Accounts"
-                    : section === "imports"
-                      ? "Imports"
-                      : "Categories"}
+              {section === "summary"
+                ? "Summary"
+                : section === "statements"
+                  ? "Statements"
+                  : section === "reconciliation"
+                    ? "Reconciliation"
+                    : section === "account"
+                      ? "Accounts"
+                      : section === "imports"
+                        ? "Imports"
+                        : "Categories"}
             </strong>
           </span>
           <button className="quiet" onClick={onExit}>
             {api ? "Sign out" : "Exit demo"}
           </button>
         </header>
-        {section === "imports" ? (
+        {api && section === "statements" && (
+          <p className="demo-notice">
+            Accounts and categories are assigned when a clear match is
+            available. Your changes teach future matches.
+          </p>
+        )}
+        {autoAssignmentNotice && (
+          <p role="status" className="demo-notice">
+            {autoAssignmentNotice}
+          </p>
+        )}
+        {section === "summary" ? (
+          <Summary
+            api={api}
+            month={fundingMonth}
+            onMonth={setFundingMonth}
+            demoRows={demoRows.current}
+            labels={labelStore.labels}
+            onEntries={(basis) => {
+              const [first, last] = monthRange(fundingMonth + "-01");
+              setStart(first);
+              setEnd(last);
+              setDateBasis("reviewed");
+              changeView(basis);
+              setSection("statements");
+            }}
+            onImports={() => setSection("imports")}
+            onReconciliation={() => setSection("reconciliation")}
+          />
+        ) : section === "imports" ? (
           <Imports
             api={api}
-            demoRows={demoRows}
+            demoRows={demoRows.current}
             onDemoDecision={demoSourceDecision}
             onDemoCoverage={demoStatementReview}
             onChanged={() => {
@@ -373,7 +553,7 @@ export default function Workspace({
             ownerId={ownerId}
             month={fundingMonth}
             onMonth={setFundingMonth}
-            demoRows={demoRows}
+            demoRows={demoRows.current}
             labels={labelStore.labels}
             receipts={contributions}
             confirmations={confirmations}
@@ -487,7 +667,48 @@ export default function Workspace({
                     </button>
                   ))}
                 </div>
+                {view !== "review" && (
+                  <div
+                    className="month-navigation"
+                    role="group"
+                    aria-label="Browse months"
+                  >
+                    <button
+                      type="button"
+                      aria-label="Previous month"
+                      disabled={!start || saving}
+                      onClick={() => changeMonth(-1)}
+                    >
+                      ←
+                    </button>
+                    <span aria-live="polite">{monthLabel}</span>
+                    <button
+                      type="button"
+                      aria-label="Next month"
+                      disabled={!start || saving}
+                      onClick={() => changeMonth(1)}
+                    >
+                      →
+                    </button>
+                  </div>
+                )}
                 <div className="date-range">
+                  <label>
+                    Sort by transaction date
+                    <select
+                      aria-label="Sort by transaction date"
+                      value={dateSort}
+                      disabled={saving}
+                      onChange={(event) => {
+                        setDateSort(event.target.value as DateSort);
+                        setOffset(0);
+                        resetDetails();
+                      }}
+                    >
+                      <option value="newest">Newest first</option>
+                      <option value="oldest">Oldest first</option>
+                    </select>
+                  </label>
                   <label>
                     Filter dates
                     <select
@@ -547,6 +768,11 @@ export default function Workspace({
                   {error}
                 </p>
               )}
+              {assignmentError && (
+                <p role="alert" className="error">
+                  {assignmentError}
+                </p>
+              )}
               <div className="table-scroll">
                 <table>
                   <thead>
@@ -572,7 +798,9 @@ export default function Workspace({
                             }
                             onClick={(event) => {
                               if (
-                                !(event.target as HTMLElement).closest("button")
+                                !(event.target as HTMLElement).closest(
+                                  "button, select",
+                                )
                               )
                                 toggleRow(row.id);
                             }}
@@ -657,20 +885,8 @@ export default function Workspace({
                                 {effective.entry_type}
                               </span>
                             </td>
-                            <td>
-                              {labelName(
-                                "account",
-                                row.account_id,
-                                row.account_name,
-                              )}
-                            </td>
-                            <td>
-                              {labelName(
-                                "category",
-                                row.category_id,
-                                row.category_name,
-                              )}
-                            </td>
+                            <td>{assignmentSelect(row, "account")}</td>
+                            <td>{assignmentSelect(row, "category")}</td>
                             <td
                               className={`amount ${effective.direction ?? "unknown"}`}
                             >

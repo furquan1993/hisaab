@@ -68,7 +68,7 @@
                     <mxGeometry height="26" width="350" y="168" as="geometry"/>
                 </mxCell>
                 <mxCell id="import" parent="1" style="swimlane;html=0;startSize=38;horizontal=1;rounded=1;arcSize=6;collapsible=0;container=1;fillColor=#ede9fe;swimlaneFillColor=#ffffff;strokeColor=#94a3b8;fontSize=19;fontStyle=1;fontColor=#0f172a;align=left;spacingLeft=14;" value="Import" vertex="1">
-                    <mxGeometry height="506" width="390" x="1250" y="210" as="geometry"/>
+                    <mxGeometry height="532" width="390" x="1250" y="210" as="geometry"/>
                 </mxCell>
                 <mxCell id="import_id" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="PK  id : UUID" vertex="1">
                     <mxGeometry height="26" width="390" y="38" as="geometry"/>
@@ -123,6 +123,9 @@
                 </mxCell>
                 <mxCell id="import_source_import_id" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="FK  source_import_id : UUID? (PDF root)" vertex="1">
                     <mxGeometry height="26" width="390" y="480" as="geometry"/>
+                </mxCell>
+                <mxCell id="import_printed_balance" parent="import" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;fontFamily=Courier New;fontSize=12;fillColor=#ffffff;strokeColor=none;" value="    printed_balance : JSON?" vertex="1">
+                    <mxGeometry height="26" width="390" y="506" as="geometry"/>
                 </mxCell>
                 <mxCell id="entry" parent="1" style="swimlane;html=0;startSize=38;horizontal=1;rounded=1;arcSize=6;collapsible=0;container=1;fillColor=#ffe4e6;swimlaneFillColor=#ffffff;strokeColor=#94a3b8;fontSize=19;fontStyle=1;fontColor=#0f172a;align=left;spacingLeft=14;" value="Entry" vertex="1">
                     <mxGeometry height="532" width="380" x="1760" y="210" as="geometry"/>

@@ -1,3 +1,4 @@
+import { compareLabelNames } from "./label-order";
 import { useState, type FormEvent } from "react";
 import type { Label, LabelDraft } from "./useLabels";
 
@@ -24,7 +25,7 @@ export default function Labels({
   const title = kind === "account" ? "Account" : "Category";
   const relevant = labels
     .filter((l) => l.kind === kind)
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => compareLabelNames(a.name, b.name));
   async function submit(event: FormEvent) {
     event.preventDefault();
     setFailure("");

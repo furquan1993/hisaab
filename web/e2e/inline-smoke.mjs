@@ -11,7 +11,9 @@ try {
     page.on("pageerror", (error) => failures.push(error.message));
     await page.goto("http://127.0.0.1:5183/hisaab/");
     await page.getByRole("button", { name: "Explore synthetic demo" }).click();
-    const row = page.locator(".entry-row").first();
+    const row = page.locator(".entry-row").filter({
+      has: page.getByText("Weekend bookstore", { exact: true }),
+    });
     await row.scrollIntoViewIfNeeded();
     expect((await row.boundingBox()).height).toBeLessThanOrEqual(64);
     await expect(

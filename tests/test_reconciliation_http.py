@@ -75,13 +75,14 @@ class ReconciliationFixture(SupabaseTests):
         self.assign(base.entry.id)
 
     def assign(self, entry_id):
+        _, rows = self.call("/entries?id=eq." + str(entry_id), self.tokens[0])
         code, _ = self.call(
             "/rpc/save_entry_decision",
             self.tokens[0],
             method="POST",
             data={
                 "p_entry_id": str(entry_id),
-                "p_expected_version": 0,
+                "p_expected_version": rows[0]["decision_version"],
                 "p_patch": {"account_id": self.account["id"]},
             },
         )
@@ -192,7 +193,7 @@ class ReconciliationHTTPTests(ReconciliationFixture):
 
     def test_unassigned_and_unknown_currency_are_visible_and_blocked(self):
         with Session(self.engine) as s, s.begin():
-            s.add(new_entry(self.records[0].imported, sequence=2, currency=None))
+            s.add(new_entry(self.records[0].imported, sequence=2, currency=None, description="UNSEEN SYNTHETIC MERCHANT"))
         rows = self.totals()
         self.assertEqual(len(rows), 2)
         self.assertTrue(all(r["blocked"] for r in rows))

@@ -7,6 +7,7 @@ class DecisionHTTPTests(SupabaseTests):
     def setUp(self):
         with self.engine.begin() as connection:
             for name in (
+                "assignment_examples",
                 "decision_events",
                 "entry_decisions",
                 "categories",

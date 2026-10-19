@@ -34,7 +34,7 @@ class SbiTests(unittest.TestCase):
             "date_missing_or_invalid", [i.code for i in result.transactions[-1].issues]
         )
         self.assertEqual(
-            result.to_dict()["totals"]["INR"], {"debit": "0.00", "credit": "439.09"}
+            result.to_dict()["totals"]["INR"], {"debit": "0.00", "credit": "118.00"}
         )
         self.assertTrue(result.needs_review)
 

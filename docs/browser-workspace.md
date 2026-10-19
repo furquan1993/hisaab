@@ -3,9 +3,10 @@
 React 19.3.1, TypeScript 7.0.2 and Vite 8.3.4 serve static assets only.
 Supabase JS 2.118.0 handles managed email/password Auth and the managed Data API.
 There is no custom data server, SSR, browser parser or money transfer. The initial hosted release was read-only. The approved hosted database
-rollout is now complete through `0011_contributions`, supporting independent
+rollout is now complete through `0014_statement_balances`, supporting independent
 Account/Category management, versioned assignments, reasoned entry and statement
-review, explicit parser-revision comparison, monthly summaries and per-card contributions. Future database changes still
+review, explicit parser-revision comparison, monthly summaries, per-card contributions,
+and separate printed statement amounts due. Future database changes still
 require a separately reviewed and approved rollout.
 
 ## Try the synthetic demo now

@@ -28,7 +28,10 @@ async function setup() {
     await user.click(screen.getByRole("button", { name: "Edit entry" }));
     await user.selectOptions(
       screen.getByLabelText("Account", { exact: true }),
-      screen.getByRole("option", { name: "Synthetic pot" }),
+      within(screen.getByLabelText("Account", { exact: true })).getByRole(
+        "option",
+        { name: "Synthetic pot" },
+      ),
     );
     await user.click(screen.getByRole("button", { name: "Save assignments" }));
   }
@@ -54,7 +57,7 @@ it("records partial/full contributions and keeps arrears in January when paid in
   );
   expect(detail.getByText("Outstanding: INR 199.00")).toBeTruthy();
   fireEvent.change(screen.getByLabelText("Reconciliation month"), {
-    target: { value: "2026-02" },
+    target: { value: "02" },
   });
   await user.click(
     screen.getByRole("button", { name: "View cards for Synthetic pot (INR)" }),
@@ -99,9 +102,13 @@ it("shows included entries and blocks unassigned groups without blocking a ready
     screen.getByRole("button", { name: "View cards for Synthetic pot (INR)" }),
   );
   await user.click(screen.getByText("Included entries · 2026-01"));
-  expect(
-    await screen.findByText(/Streaming subscription · 2026-01-18/),
-  ).toBeTruthy();
+  const entries = within(
+    await screen.findByRole("list", { name: "Included entries" }),
+  );
+  expect(await entries.findByText("Streaming subscription")).toBeTruthy();
+  expect(entries.getByText("18 Jan 2026")).toBeTruthy();
+  expect(entries.getByText("purchase")).toBeTruthy();
+  expect(entries.getByText("− INR 299.00")).toBeTruthy();
   await user.click(
     screen.getByRole("button", {
       name: "Contributions for YES Bank • demo · 2026-01",
@@ -114,4 +121,20 @@ it("shows included entries and blocks unassigned groups without blocking a ready
       }) as HTMLButtonElement
     ).disabled,
   ).toBe(false);
+});
+
+it("selects a reconciliation month and year without native month input support", async () => {
+  const user = await setup();
+  const month = screen.getByRole("combobox", { name: "Reconciliation month" });
+  const year = screen.getByRole("spinbutton", { name: "Reconciliation year" });
+  await user.selectOptions(month, "12");
+  expect(screen.getByText("Account summary · 2026-12")).toBeTruthy();
+  await user.clear(year);
+  await user.type(year, "2025");
+  expect(screen.getByText("Account summary · 2025-12")).toBeTruthy();
+  await user.clear(year);
+  await user.type(year, "0000");
+  await user.tab();
+  expect((year as HTMLInputElement).value).toBe("2025");
+  expect(screen.getByText("Account summary · 2025-12")).toBeTruthy();
 });

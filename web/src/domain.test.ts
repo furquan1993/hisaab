@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { entrySchema, filterEntries, formatAmount, type Entry } from "./domain";
+import {
+  entrySchema,
+  filterEntries,
+  formatAmount,
+  sortEntries,
+  type Entry,
+} from "./domain";
 
 const row = (changes: Partial<Entry> = {}): Entry =>
   entrySchema.parse({
@@ -77,4 +83,30 @@ describe("exact financial display", () => {
     expect(formatAmount(null, "INR", "debit")).toBe("Amount unknown");
     expect(formatAmount("1.00", null, null)).toBe("? 1.00");
   });
+});
+
+it("sorts displayed transaction dates in both directions, with unknown dates last and stable ties", () => {
+  const rows = [
+    row({ id: "unknown", effective_transaction_date: null }),
+    row({ id: "late", transaction_date: "2026-01-20" }),
+    row({
+      id: "corrected",
+      transaction_date: "2026-01-25",
+      effective_transaction_date: "2026-01-01",
+    }),
+    row({ id: "tie", transaction_date: "2026-01-20", sequence: 2 }),
+  ];
+  expect(sortEntries(rows, "newest").map((entry) => entry.id)).toEqual([
+    "late",
+    "tie",
+    "corrected",
+    "unknown",
+  ]);
+  expect(sortEntries(rows, "oldest").map((entry) => entry.id)).toEqual([
+    "corrected",
+    "late",
+    "tie",
+    "unknown",
+  ]);
+  expect(rows[0].id).toBe("unknown");
 });

@@ -35,7 +35,8 @@ class ReconciliationPerformanceTests(ReconciliationFixture):
                 accounts.append(account.id)
             for index in range(64):
                 entry = new_entry(
-                    base.imported, sequence=index + 2, amount=Decimal("10.01")
+                    base.imported, sequence=index + 2, amount=Decimal("10.01"),
+                    description=f"SYNTHETIC PERFORMANCE SHOP {index}"
                 )
                 session.add(entry)
                 session.flush()
