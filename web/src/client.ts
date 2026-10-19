@@ -9,6 +9,7 @@ import {
 
 import { validatePublicConfig } from "./public-config";
 import publicProject from "../../supabase.public.json";
+import { columnFields, type TableOptions } from "./entry-table";
 export { validatePublicConfig } from "./public-config";
 const url = import.meta.env.VITE_SUPABASE_URL || publicProject.url;
 const key =
@@ -49,6 +50,7 @@ export async function readPage(
   sort: DateSort = "newest",
   search = "",
   assignments: EntryAssignmentFilters = {},
+  columns: TableOptions = {},
 ) {
   let query = api.from("entries").select("*", { count: "exact" });
   if (view === "review") query = query.eq("needs_review", true);
@@ -75,6 +77,21 @@ export async function readPage(
         .join(","),
     );
   }
+  if (columns.card?.trim())
+    query = query.ilike(
+      "card_label",
+      `%${columns.card.trim().replace(/[\\%_]/g, "\\$&")}%`,
+    );
+  if (columns.type) query = query.eq("effective_entry_type", columns.type);
+  if (columns.direction)
+    query = query.eq("effective_direction", columns.direction);
+  if (columns.min) query = query.gte("effective_amount", columns.min);
+  if (columns.max) query = query.lte("effective_amount", columns.max);
+  if (columns.sort)
+    query = query.order(columnFields[columns.sort.column], {
+      ascending: columns.sort.ascending,
+      nullsFirst: false,
+    });
   const { data, error, count } = await query
     .order("effective_transaction_date", {
       ascending: sort === "oldest",

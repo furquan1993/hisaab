@@ -1,3 +1,10 @@
+import ColumnMenu from "./ColumnMenu";
+import {
+  applyColumnOptions,
+  amountFilterError,
+  type SortColumn,
+  type TableOptions,
+} from "./entry-table";
 import {
   deleteAccount,
   previewAccountDeletion,
@@ -89,6 +96,59 @@ export default function Workspace({
   const [describing, setDescribing] = useState<Entry | null>(null);
   const descriptionTrigger = useRef<HTMLButtonElement | null>(null);
   const [search, setSearch] = useState("");
+  const [columnOptions, setColumnOptions] = useState<TableOptions>({});
+  const columnError = amountFilterError(columnOptions);
+  const assignmentSort =
+    columnOptions.sort?.column === "account" ||
+    columnOptions.sort?.column === "category";
+  function updateColumns(patch: Partial<TableOptions>) {
+    setColumnOptions((current) => ({ ...current, ...patch }));
+    setOffset(0);
+    resetDetails();
+  }
+  function sortFor(
+    column: SortColumn | "date",
+  ): "ascending" | "descending" | undefined {
+    if (columnOptions.sort)
+      return columnOptions.sort.column === column
+        ? columnOptions.sort.ascending
+          ? "ascending"
+          : "descending"
+        : undefined;
+    return column === "date"
+      ? dateSort === "oldest"
+        ? "ascending"
+        : "descending"
+      : undefined;
+  }
+  function columnSort(
+    column: SortColumn,
+    ascending = "A → Z",
+    descending = "Z → A",
+  ) {
+    return (
+      <div
+        className="column-sort-choices"
+        role="group"
+        aria-label={`Sort ${column}`}
+      >
+        {[true, false].map((up) => (
+          <button
+            key={String(up)}
+            type="button"
+            aria-pressed={
+              columnOptions.sort?.column === column &&
+              columnOptions.sort.ascending === up
+            }
+            onClick={() => updateColumns({ sort: { column, ascending: up } })}
+          >
+            <span aria-hidden="true">{up ? "↑" : "↓"}</span>
+            {up ? ascending : descending}
+          </button>
+        ))}
+      </div>
+    );
+  }
   const [accountFilter, setAccountFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const assignmentFilters = {
@@ -137,27 +197,32 @@ export default function Workspace({
     setAutoAssignmentNotice("");
     setError("");
     setLoading(true);
-    if (view !== "review" && invalid) {
+    if ((view !== "review" && invalid) || columnError) {
       setLoading(false);
       return;
     }
-    const filtered = sortEntries(
-      filterEntries(demoRows.current, view, start, end, dateBasis).filter(
-        (row) =>
-          [
-            row.description,
-            row.effective_description,
-            row.friendly_description,
-          ].some((value) =>
-            value?.toLowerCase().includes(search.toLowerCase().trim()),
-          ) &&
-          (!accountFilter ||
-            (row.account_id ?? "unassigned") === accountFilter) &&
-          (!categoryFilter ||
-            (row.category_id ?? "unassigned") === categoryFilter),
-      ),
-      dateSort,
-    );
+    const filtered = columnError
+      ? []
+      : applyColumnOptions(
+          sortEntries(
+            filterEntries(demoRows.current, view, start, end, dateBasis).filter(
+              (row) =>
+                [
+                  row.description,
+                  row.effective_description,
+                  row.friendly_description,
+                ].some((value) =>
+                  value?.toLowerCase().includes(search.toLowerCase().trim()),
+                ) &&
+                (!accountFilter ||
+                  (row.account_id ?? "unassigned") === accountFilter) &&
+                (!categoryFilter ||
+                  (row.category_id ?? "unassigned") === categoryFilter),
+            ),
+            dateSort,
+          ),
+          columnOptions,
+        );
     const promise = api
       ? readPage(
           api,
@@ -170,6 +235,7 @@ export default function Workspace({
           dateSort,
           search,
           assignmentFilters,
+          columnOptions,
         )
       : Promise.resolve({
           rows: filtered.slice(offset, offset + 50),
@@ -198,6 +264,7 @@ export default function Workspace({
                 dateSort,
                 search,
                 assignmentFilters,
+                columnOptions,
               );
               labelStore.reload();
             }
@@ -239,6 +306,7 @@ export default function Workspace({
     search,
     accountFilter,
     categoryFilter,
+    columnOptions,
   ]);
   useEffect(() => {
     if (loading || saving || !pendingFocus.current) return;
@@ -459,7 +527,7 @@ export default function Workspace({
     setNotice(
       "Assignments saved. Source facts and review issues are unchanged.",
     );
-    if (accountFilter || categoryFilter) {
+    if (accountFilter || categoryFilter || assignmentSort) {
       setOffset(0);
       setLoading(true);
       setRefresh((n) => n + 1);
@@ -512,7 +580,10 @@ export default function Workspace({
           result.error +
             " The batch stopped; remaining transactions were not attempted.",
         );
-      if (result.saved.length && (accountFilter || categoryFilter)) {
+      if (
+        result.saved.length &&
+        (accountFilter || categoryFilter || assignmentSort)
+      ) {
         setOffset(0);
         setRefresh((n) => n + 1);
       }
@@ -1039,6 +1110,11 @@ export default function Workspace({
                   Choose a valid start and end date.
                 </p>
               )}
+              {columnError && (
+                <p role="alert" className="error">
+                  {columnError}
+                </p>
+              )}
               {error && (
                 <p role="alert" className="error">
                   {error}
@@ -1053,144 +1129,385 @@ export default function Workspace({
                 <table className="statement-table">
                   <thead>
                     <tr>
-                      <th scope="col">Select</th>
-                      <th scope="col" className="transaction-column">
-                        <div className="column-heading">
-                          <span>Transaction</span>
-                          <input
-                            aria-label="Search descriptions"
-                            placeholder="Search descriptions…"
-                            type="search"
-                            maxLength={500}
-                            value={search}
-                            disabled={saving}
-                            onChange={(event) => {
-                              setSearch(event.target.value);
-                              setOffset(0);
-                              resetDetails();
-                            }}
-                          />
-                        </div>
+                      <th scope="col" className="selection-column">
+                        <input
+                          type="checkbox"
+                          aria-label="Select all transactions on this page"
+                          checked={
+                            rows.some((row) => row.is_selected) &&
+                            rows
+                              .filter((row) => row.is_selected)
+                              .every((row) => bulkSelection.has(row.id))
+                          }
+                          ref={(node) => {
+                            if (node)
+                              node.indeterminate =
+                                bulkSelection.size > 0 &&
+                                !rows
+                                  .filter((row) => row.is_selected)
+                                  .every((row) => bulkSelection.has(row.id));
+                          }}
+                          disabled={
+                            saving ||
+                            loading ||
+                            !rows.some((row) => row.is_selected)
+                          }
+                          onChange={(event) =>
+                            setBulkSelection(
+                              event.target.checked
+                                ? new Set(
+                                    rows
+                                      .filter((row) => row.is_selected)
+                                      .map((row) => row.id),
+                                  )
+                                : new Set(),
+                            )
+                          }
+                        />
                       </th>
-                      <th scope="col">Card & statement</th>
-                      <th
-                        scope="col"
-                        aria-sort={
-                          dateSort === "newest" ? "descending" : "ascending"
-                        }
-                      >
-                        <div className="column-heading">
-                          <span>Date</span>
-                          <select
-                            aria-label="Sort by transaction date"
-                            value={dateSort}
-                            disabled={saving}
-                            onChange={(event) => {
-                              setDateSort(event.target.value as DateSort);
+                      <th scope="col" aria-sort={sortFor("transaction")}>
+                        <ColumnMenu
+                          title="Transaction"
+                          active={!!search}
+                          sorted={sortFor("transaction")}
+                          disabled={saving}
+                        >
+                          {columnSort(
+                            "transaction",
+                            "Statement text A → Z",
+                            "Statement text Z → A",
+                          )}
+                          <label>
+                            Search descriptions
+                            <input
+                              type="search"
+                              aria-label="Search descriptions"
+                              value={search}
+                              maxLength={500}
+                              placeholder="Find a transaction…"
+                              disabled={saving}
+                              onChange={(event) => {
+                                setSearch(event.target.value);
+                                setOffset(0);
+                                resetDetails();
+                              }}
+                            />
+                          </label>
+                          <button
+                            className="column-clear"
+                            disabled={!search}
+                            onClick={() => {
+                              setSearch("");
                               setOffset(0);
                               resetDetails();
                             }}
                           >
-                            <option value="newest">Newest first</option>
-                            <option value="oldest">Oldest first</option>
-                          </select>
-                          <details className="column-date-range">
-                            <summary>Date options</summary>
-                            <div className="column-date-controls">
-                              <label>
-                                Filter dates
-                                <select
-                                  aria-label="Filter dates"
-                                  value={dateBasis}
-                                  disabled={saving || view === "review"}
-                                  onChange={(event) => {
-                                    setDateBasis(
-                                      event.target.value as
-                                        "original" | "reviewed",
-                                    );
-                                    setOffset(0);
-                                    resetDetails();
-                                  }}
-                                >
-                                  <option value="original">
-                                    Original extracted dates
-                                  </option>
-                                  <option value="reviewed">
-                                    Reviewed dates
-                                  </option>
-                                </select>
-                              </label>
-                              <label>
-                                From
-                                <input
-                                  type="date"
-                                  value={start}
-                                  disabled={saving || view === "review"}
-                                  onChange={(event) =>
-                                    changeRange(event.target.value, true)
-                                  }
-                                />
-                              </label>
-                              <label>
-                                To
-                                <input
-                                  type="date"
-                                  value={end}
-                                  disabled={saving || view === "review"}
-                                  onChange={(event) =>
-                                    changeRange(event.target.value, false)
-                                  }
-                                />
-                              </label>
-                            </div>
-                          </details>
-                        </div>
+                            Clear search
+                          </button>
+                        </ColumnMenu>
                       </th>
-                      <th scope="col">Type</th>
-                      {(["account", "category"] as const).map((kind) => (
-                        <th scope="col" key={kind}>
-                          <div className="column-heading">
-                            <span>
-                              {kind === "account" ? "Account" : "Category"}
-                            </span>
-                            <select
-                              aria-label={`Filter by ${kind}`}
-                              value={
-                                kind === "account"
-                                  ? accountFilter
-                                  : categoryFilter
+                      <th scope="col" aria-sort={sortFor("card")}>
+                        <ColumnMenu
+                          title="Card & statement"
+                          active={!!columnOptions.card}
+                          sorted={sortFor("card")}
+                          disabled={saving}
+                        >
+                          {columnSort("card")}
+                          <label>
+                            Card name
+                            <input
+                              type="search"
+                              aria-label="Filter by card"
+                              maxLength={120}
+                              placeholder="Find a card…"
+                              value={columnOptions.card ?? ""}
+                              onChange={(event) =>
+                                updateColumns({ card: event.target.value })
                               }
-                              disabled={saving || labelStore.loading}
+                            />
+                          </label>
+                          <button
+                            className="column-clear"
+                            disabled={!columnOptions.card}
+                            onClick={() => updateColumns({ card: "" })}
+                          >
+                            Clear card filter
+                          </button>
+                        </ColumnMenu>
+                      </th>
+                      <th scope="col" aria-sort={sortFor("date")}>
+                        <ColumnMenu
+                          title="Date"
+                          active={
+                            dateBasis === "reviewed" ||
+                            start !== monthRange(start)[0] ||
+                            end !== monthRange(start)[1]
+                          }
+                          sorted={sortFor("date")}
+                          disabled={saving}
+                        >
+                          <label>
+                            Sort by transaction date
+                            <select
+                              aria-label="Sort by transaction date"
+                              value={columnOptions.sort ? "" : dateSort}
+                              disabled={saving}
                               onChange={(event) => {
-                                if (kind === "account")
-                                  setAccountFilter(event.target.value);
-                                else setCategoryFilter(event.target.value);
+                                setDateSort(event.target.value as DateSort);
+                                updateColumns({ sort: null });
+                              }}
+                            >
+                              <option value="" disabled>
+                                Choose date order
+                              </option>
+                              <option value="newest">Newest first</option>
+                              <option value="oldest">Oldest first</option>
+                            </select>
+                          </label>
+                          <label>
+                            Filter dates
+                            <select
+                              aria-label="Filter dates"
+                              value={dateBasis}
+                              disabled={saving || view === "review"}
+                              onChange={(event) => {
+                                setDateBasis(
+                                  event.target.value as "original" | "reviewed",
+                                );
                                 setOffset(0);
                                 resetDetails();
                               }}
                             >
-                              <option value="">
-                                {kind === "account"
-                                  ? "All accounts"
-                                  : "All categories"}
+                              <option value="original">
+                                Original extracted dates
                               </option>
-                              <option value="unassigned">Unassigned</option>
-                              {labelStore.labels
-                                .filter((label) => label.kind === kind)
-                                .sort((a, b) =>
-                                  compareLabelNames(a.name, b.name),
-                                )
-                                .map((label) => (
-                                  <option key={label.id} value={label.id}>
-                                    {label.name}
-                                    {label.is_archived ? " (archived)" : ""}
-                                  </option>
-                                ))}
+                              <option value="reviewed">Reviewed dates</option>
                             </select>
+                          </label>
+                          <div className="column-range">
+                            <label>
+                              From
+                              <input
+                                type="date"
+                                value={start}
+                                disabled={saving || view === "review"}
+                                onChange={(event) =>
+                                  changeRange(event.target.value, true)
+                                }
+                              />
+                            </label>
+                            <label>
+                              To
+                              <input
+                                type="date"
+                                value={end}
+                                disabled={saving || view === "review"}
+                                onChange={(event) =>
+                                  changeRange(event.target.value, false)
+                                }
+                              />
+                            </label>
                           </div>
+                        </ColumnMenu>
+                      </th>
+                      <th scope="col" aria-sort={sortFor("type")}>
+                        <ColumnMenu
+                          title="Type"
+                          active={!!columnOptions.type}
+                          sorted={sortFor("type")}
+                          disabled={saving}
+                        >
+                          {columnSort("type")}
+                          <label>
+                            Entry type
+                            <select
+                              aria-label="Filter by type"
+                              value={columnOptions.type ?? ""}
+                              onChange={(event) =>
+                                updateColumns({ type: event.target.value })
+                              }
+                            >
+                              <option value="">All types</option>
+                              {[
+                                "purchase",
+                                "payment",
+                                "refund",
+                                "cashback",
+                                "fee",
+                                "interest",
+                                "tax",
+                                "reversal",
+                                "unknown",
+                              ].map((type) => (
+                                <option key={type} value={type}>
+                                  {type[0].toUpperCase() + type.slice(1)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <button
+                            className="column-clear"
+                            disabled={!columnOptions.type}
+                            onClick={() => updateColumns({ type: "" })}
+                          >
+                            Clear type filter
+                          </button>
+                        </ColumnMenu>
+                      </th>
+                      {(["account", "category"] as const).map((kind) => (
+                        <th scope="col" key={kind} aria-sort={sortFor(kind)}>
+                          <ColumnMenu
+                            title={kind === "account" ? "Account" : "Category"}
+                            active={
+                              !!(kind === "account"
+                                ? accountFilter
+                                : categoryFilter)
+                            }
+                            sorted={sortFor(kind)}
+                            disabled={saving}
+                          >
+                            {columnSort(kind)}
+                            <label>
+                              {kind === "account"
+                                ? "Filter by account"
+                                : "Filter by category"}
+                              <select
+                                aria-label={`Filter by ${kind}`}
+                                value={
+                                  kind === "account"
+                                    ? accountFilter
+                                    : categoryFilter
+                                }
+                                disabled={saving || labelStore.loading}
+                                onChange={(event) => {
+                                  if (kind === "account")
+                                    setAccountFilter(event.target.value);
+                                  else setCategoryFilter(event.target.value);
+                                  setOffset(0);
+                                  resetDetails();
+                                }}
+                              >
+                                <option value="">
+                                  {kind === "account"
+                                    ? "All accounts"
+                                    : "All categories"}
+                                </option>
+                                <option value="unassigned">Unassigned</option>
+                                {labelStore.labels
+                                  .filter((label) => label.kind === kind)
+                                  .sort((a, b) =>
+                                    compareLabelNames(a.name, b.name),
+                                  )
+                                  .map((label) => (
+                                    <option key={label.id} value={label.id}>
+                                      {label.name}
+                                      {label.is_archived ? " (archived)" : ""}
+                                    </option>
+                                  ))}
+                              </select>
+                            </label>
+                            <button
+                              className="column-clear"
+                              disabled={
+                                !(kind === "account"
+                                  ? accountFilter
+                                  : categoryFilter)
+                              }
+                              onClick={() => {
+                                if (kind === "account") setAccountFilter("");
+                                else setCategoryFilter("");
+                                setOffset(0);
+                                resetDetails();
+                              }}
+                            >
+                              Clear {kind} filter
+                            </button>
+                          </ColumnMenu>
                         </th>
                       ))}
-                      <th className="amount">Amount</th>
+                      <th
+                        scope="col"
+                        className="amount"
+                        aria-sort={sortFor("amount")}
+                      >
+                        <ColumnMenu
+                          title="Amount"
+                          active={
+                            !!(
+                              columnOptions.min ||
+                              columnOptions.max ||
+                              columnOptions.direction
+                            )
+                          }
+                          sorted={sortFor("amount")}
+                          disabled={saving}
+                        >
+                          {columnSort(
+                            "amount",
+                            "Smallest amount first",
+                            "Largest amount first",
+                          )}
+                          <label>
+                            Direction
+                            <select
+                              aria-label="Filter by direction"
+                              value={columnOptions.direction ?? ""}
+                              onChange={(event) =>
+                                updateColumns({ direction: event.target.value })
+                              }
+                            >
+                              <option value="">Debits & credits</option>
+                              <option value="debit">Debits only</option>
+                              <option value="credit">Credits only</option>
+                            </select>
+                          </label>
+                          <div className="column-range">
+                            <label>
+                              Minimum
+                              <input
+                                aria-label="Minimum amount"
+                                inputMode="decimal"
+                                value={columnOptions.min ?? ""}
+                                onChange={(event) =>
+                                  updateColumns({ min: event.target.value })
+                                }
+                                placeholder="0.00"
+                              />
+                            </label>
+                            <label>
+                              Maximum
+                              <input
+                                aria-label="Maximum amount"
+                                inputMode="decimal"
+                                value={columnOptions.max ?? ""}
+                                onChange={(event) =>
+                                  updateColumns({ max: event.target.value })
+                                }
+                                placeholder="No limit"
+                              />
+                            </label>
+                          </div>
+                          {columnError && (
+                            <p className="column-error">{columnError}</p>
+                          )}
+                          <button
+                            className="column-clear"
+                            disabled={
+                              !(
+                                columnOptions.min ||
+                                columnOptions.max ||
+                                columnOptions.direction
+                              )
+                            }
+                            onClick={() =>
+                              updateColumns({ min: "", max: "", direction: "" })
+                            }
+                          >
+                            Clear amount filter
+                          </button>
+                        </ColumnMenu>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>

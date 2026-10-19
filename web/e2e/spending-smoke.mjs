@@ -17,8 +17,8 @@ try {
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByText("SYNTHETIC TRIP HOTEL", { exact: true }).waitFor();
   await page.getByLabel("From", { exact: true }).waitFor({ state: "attached" });
-  if (await page.locator(".column-date-range:not([open]) > summary").count())
-    await page.locator(".column-date-range > summary").click();
+  if (await page.getByRole("button", { name: "Date: filter and sort" }).count() && !(await page.getByLabel("From", { exact: true }).isVisible()))
+    await page.getByRole("button", { name: "Date: filter and sort" }).click();
   await page.getByLabel("From", { exact: true }).fill("2026-01-01");
   await page.getByText("SYNTHETIC SHOP", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Categories", exact: true }).click();
@@ -68,8 +68,8 @@ try {
   await expect(page.locator(".spending-net")).toHaveText("INR 300.00");
   await page.getByRole("button", { name: "Statements", exact: true }).click();
   await page.getByLabel("From", { exact: true }).waitFor({ state: "attached" });
-  if (await page.locator(".column-date-range:not([open]) > summary").count())
-    await page.locator(".column-date-range > summary").click();
+  if (await page.getByRole("button", { name: "Date: filter and sort" }).count() && !(await page.getByLabel("From", { exact: true }).isVisible()))
+    await page.getByRole("button", { name: "Date: filter and sort" }).click();
   await page.getByLabel("From", { exact: true }).fill("2026-01-01");
   await page
     .getByRole("button", { name: "Details for SYNTHETIC SHOP", exact: true })

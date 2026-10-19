@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Workspace from "./Workspace";
 import { readPage, type BrowserClient } from "./client";
@@ -282,7 +288,12 @@ it("passes description searches to the paginated API and resets to the first pag
   await screen.findByText(demoEntries[0].description);
   await user.click(screen.getByRole("button", { name: "Next" }));
   await waitFor(() => expect(vi.mocked(readPage).mock.lastCall?.[4]).toBe(50));
-  await user.type(screen.getByLabelText("Search descriptions"), "Amazon");
+  await user.click(
+    screen.getByRole("button", { name: "Transaction: filter and sort" }),
+  );
+  fireEvent.change(screen.getByLabelText("Search descriptions"), {
+    target: { value: "Amazon" },
+  });
   await waitFor(() => {
     expect(vi.mocked(readPage).mock.lastCall?.[4]).toBe(0);
     expect(vi.mocked(readPage).mock.lastCall?.[8]).toBe("Amazon");
@@ -305,7 +316,12 @@ it("combines account and category filters with search and resets pagination", as
   await waitFor(() => expect(vi.mocked(readPage).mock.lastCall?.[4]).toBe(50));
   await user.selectOptions(screen.getByLabelText("Filter by account"), "pot");
   await user.selectOptions(screen.getByLabelText("Filter by category"), "food");
-  await user.type(screen.getByLabelText("Search descriptions"), "train");
+  await user.click(
+    screen.getByRole("button", { name: "Transaction: filter and sort" }),
+  );
+  fireEvent.change(screen.getByLabelText("Search descriptions"), {
+    target: { value: "train" },
+  });
   await waitFor(() => {
     const call = vi.mocked(readPage).mock.lastCall;
     expect(call?.[4]).toBe(0);
@@ -338,7 +354,12 @@ it("filters demo transactions by assignments and description together", async ()
   const description = demoEntries.find(
     (r) => r.is_selected && r.statement_date?.startsWith("2026-01"),
   )!.description;
-  await user.type(screen.getByLabelText("Search descriptions"), description);
+  await user.click(
+    screen.getByRole("button", { name: "Transaction: filter and sort" }),
+  );
+  fireEvent.change(screen.getByLabelText("Search descriptions"), {
+    target: { value: description },
+  });
   const account = await screen.findByLabelText(`Account for ${description}`);
   await user.selectOptions(account, "pot");
   await user.selectOptions(screen.getByLabelText("Filter by account"), "pot");

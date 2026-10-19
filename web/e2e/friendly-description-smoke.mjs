@@ -44,6 +44,7 @@ try {
     });
     await page.reload();
     await expect(title).toHaveText("Desk lamp from Amazon");
+    await page.getByRole("button", { name: "Transaction: filter and sort" }).click();
     const search = page.getByLabel("Search descriptions");
     await search.fill("Desk lamp");
     await expect(page.locator(".entry-description")).toHaveText([

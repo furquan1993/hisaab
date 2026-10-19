@@ -1926,52 +1926,198 @@ td .card-label {
   margin: 0;
   min-width: 0;
 }
+/* Compact, consistent column menus. Panels use the browser top layer. */
 .statement-table th {
-  vertical-align: top;
+  vertical-align: middle;
+  padding-top: 13px;
+  padding-bottom: 13px;
 }
-.statement-table .column-heading {
+.column-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: #798b76;
+  font: inherit;
+  white-space: nowrap;
+}
+.column-trigger:hover,
+.column-trigger.is-filtered {
+  color: #356348;
+}
+.column-trigger svg {
+  opacity: 0.55;
+}
+.column-trigger:hover svg,
+.column-trigger.is-filtered svg {
+  opacity: 1;
+}
+.column-sort-indicator {
+  font-size: 13px;
+  color: #52784c;
+}
+.column-active-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #638c57;
+}
+.column-menu {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  box-sizing: border-box;
+  width: 280px;
+  max-width: calc(100vw - 24px);
+  overflow: auto;
+  padding: 15px;
+  border: 1px solid #dce5d6;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow:
+    0 12px 36px #173c2524,
+    0 2px 8px #173c2512;
+  color: #405541;
+  font:
+    12px/1.5 Inter,
+    system-ui,
+    sans-serif;
+  text-align: left;
+  white-space: normal;
+}
+.column-menu-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #edf1e9;
+}
+.column-menu-title strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.column-menu-content {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.column-menu-title button {
+  border: 0;
+  background: transparent;
+  padding: 0 5px;
+  color: #879780;
+  font-size: 21px;
+  line-height: 24px;
+}
+.column-menu label {
   display: grid;
-  gap: 8px;
-  min-width: 120px;
-  font-weight: inherit;
+  gap: 6px;
+  margin: 12px 0;
+  font-size: 11px;
+  color: #798b76;
 }
-.statement-table .transaction-column .column-heading {
-  min-width: 180px;
-}
-.column-heading input,
-.column-heading select {
+.column-menu input,
+.column-menu select,
+.bulk-assignment-action select {
   box-sizing: border-box;
   width: 100%;
-  min-height: 34px;
-  padding: 7px 9px;
+  min-width: 0;
+  min-height: 36px;
   border: 1px solid #dce4d7;
-  border-radius: 5px;
-  background: #fff;
-  color: #405c45;
+  border-radius: 6px;
+  padding: 8px 10px;
   font: inherit;
-  font-size: 11px;
-  letter-spacing: normal;
+  font-size: 12px;
+  color: #405c45;
+  background-color: #fbfcf9;
 }
-.column-heading input:focus-visible,
-.column-heading select:focus-visible,
-.column-date-range summary:focus-visible {
-  outline: 2px solid #6a8e5f;
+.column-menu select,
+.bulk-assignment-action select,
+.statement-table .inline-assignment {
+  appearance: none;
+  padding-right: 28px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #7b9275 50%),
+    linear-gradient(135deg, #7b9275 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-size: 4px 4px;
+  background-repeat: no-repeat;
+}
+.column-range {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.column-menu .column-range label {
+  min-width: 0;
+}
+.column-sort-choices {
+  display: grid;
+  gap: 3px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #edf1e9;
+}
+.column-sort-choices button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  padding: 8px 10px;
+  color: #5e7259;
+  font: inherit;
+  text-align: left;
+}
+.column-sort-choices button:hover,
+.column-sort-choices button[aria-pressed="true"] {
+  background: #edf4e8;
+  color: #356348;
+}
+.column-clear {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-top: 1px solid #edf1e9;
+  margin-top: 10px;
+  padding: 12px 0 0;
+  background: transparent;
+  color: #64815a;
+  font: inherit;
+  text-align: left;
+}
+.column-menu :focus-visible,
+.column-trigger:focus-visible {
+  outline: 2px solid #7b9e6d;
   outline-offset: 2px;
 }
-.column-date-range summary {
-  cursor: pointer;
-  color: #516b4c;
-  padding: 3px 0;
-  font-size: 10px;
+.column-error {
+  color: #a34a3a;
+  font-size: 11px;
 }
-.column-date-controls {
-  display: grid;
-  gap: 9px;
-  padding-top: 10px;
+.statement-table .selection-column {
+  width: 28px;
 }
-.column-date-controls label {
+.bulk-assignments {
+  font-size: 12px;
+}
+.bulk-assignment-action {
+  align-items: end;
+}
+.bulk-assignment-action label {
   display: grid;
   gap: 5px;
+  font-size: 10px;
+  color: #7b8e74;
+}
+.bulk-assignment-action select {
+  min-width: 160px;
 }
 .bulk-assignments {
   display: flex;

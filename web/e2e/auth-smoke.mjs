@@ -14,6 +14,23 @@ try {
     .fill(process.env.HISAAB_E2E_PASSWORD);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByText("SYNTHETIC SHOP", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "Card & statement: filter and sort", exact: true }).click();
+  await Promise.all([
+    page.waitForResponse(response => response.url().includes("/rest/v1/entries?") && response.url().includes("card_label=ilike") && response.status() === 200),
+    page.getByLabel("Filter by card").fill("Invented"),
+  ]);
+  await expect(page.locator(".entry-row .card-label")).toHaveText("Invented card");
+  await page.getByRole("button", { name: "Clear card filter", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Amount: filter and sort", exact: true }).click();
+  await page.getByLabel("Minimum amount").fill("123.45");
+  await page.getByLabel("Maximum amount").fill("123.45");
+  await Promise.all([
+    page.waitForResponse(response => response.url().includes("/rest/v1/entries?") && response.url().includes("order=effective_amount.asc") && response.status() === 200),
+    page.getByRole("button", { name: "Smallest amount first", exact: true }).click(),
+  ]);
+  await expect(page.locator(".entry-row")).toHaveCount(1);
+  await page.keyboard.press("Escape");
   await page.reload();
   await page.getByText("SYNTHETIC SHOP", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Details for SYNTHETIC SHOP", exact: true }).click();

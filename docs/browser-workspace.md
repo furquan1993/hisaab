@@ -283,10 +283,16 @@ native recovery and parser/persistence regressions. CI runs both jobs separately
 
 ### Filter statement transactions
 
-In **Statements**, search descriptions in the **Transaction** column header and
-filter using the **Account** and **Category** column headers. The **Date** header
-contains transaction-date sorting; expand **Date options** there to change the
-date basis or enter a custom date range. Month navigation stays above the table.
+In **Statements**, click any data column's header to open its compact filter and
+sort menu. A dot marks an active filter; an arrow shows the sorted column.
+**Transaction** searches original, reviewed and friendly descriptions; its text
+sort uses reviewed statement text. **Card & statement** filters card names.
+**Date** controls date ordering, basis and range. **Type** selects an entry type.
+**Account** and **Category** filter assignments. **Amount** offers exact minimum
+and maximum magnitudes, debit/credit filtering and numeric sorting. Unknown
+values stay last when sorting. Filters and sorting apply before pagination.
+Use the header checkbox to select the current page. Menus close with Escape or
+an outside click; month navigation stays above the table.
 Choose a named label (including archived labels),
 **Unassigned**, or **All accounts / All categories** to remove that filter.
 Filters combine with each other, description search and the selected date view.
