@@ -3,8 +3,10 @@
 React 19.3.1, TypeScript 7.0.2 and Vite 8.3.4 serve static assets only.
 Supabase JS 2.118.0 handles managed email/password Auth and the managed Data API.
 There is no custom data server, SSR, browser parser, money transfer or settlement
-calculation. The first workspace is **read-only**; FUR-19/FUR-7/FUR-17 still own
-revision-safe review corrections and independent Account/Category editing.
+calculation. The first hosted release remains read-only. The new implementation adds
+independent Account/Category management, versioned assignments, reasoned entry and
+statement review, and explicit parser-revision comparison. These changes require a
+separately reviewed and approved database rollout before live editing is available.
 
 ## Try the synthetic demo now
 
@@ -47,17 +49,19 @@ build-time configuration, not a way to change a deployed bundle remotely.
 ## Operator rollout: only after review and explicit approval
 
 Implementation does **not** deploy migrations, grant hosted access or load
-real financial records automatically. Keep the initial hosted revision until
-the change is reviewed. Preserve the protected backup/restore and first-load
-gate in FUR-20; a successful synthetic demo does not satisfy it.
+real financial records automatically. Preserve the currently approved hosted revision;
+the first read-only rollout through 0003 and controlled-load checkpoint are complete.
+New revisions 0004 through 0009 are implementation changes, not permission to deploy.
+Back up, restore-check and obtain explicit rollout approval after code review; a
+successful synthetic demo alone is not deployment approval.
 
 1. In Supabase, disable public signups and anonymous sign-ins. Keep the **email
    provider enabled** so existing users can sign in. Create the initial user
    administratively and confirm its email. Keep its password private.
 2. Inspect the migration SQL and make the backup/deployment decision.
-   Apply new revisions 0002 and 0003 only after approval:
-   `uv run alembic current`, `uv run alembic upgrade head`, then
-   `uv run alembic check`. Never edit the deployed initial revision.
+   Inspect `uv run alembic current` privately and apply only the explicitly approved
+   target revision, not an unreviewed moving head. Verify migration drift afterward.
+   Never edit deployed revisions or treat this document as rollout authorization.
 3. Use `uv run python -m core owners-list`. Reuse the intended existing owner,
    or create one once with `uv run python -m core owner-create "Primary"`.
 4. Bind the existing owner through the trusted CLI:
@@ -93,8 +97,10 @@ to revoke all access tokens on other devices instantly.
   claim, accepts only the authenticated role, and takes no client owner argument.
   Its narrow definer execution avoids recursive Owner RLS; its search path is
   fixed and every application object is qualified.
-- All five tables have read policies. Authenticated clients get selected read
-  grants only, no original-fact/PDF/identity writes. Anonymous and unmapped
+- All evidence and decision tables have owner-scoped read policies. Browser clients
+  have no direct table mutations; narrowly validated, version-checked mutation
+  functions save decisions and audit records separately. There are no original-fact,
+  PDF or identity writes. Anonymous and unmapped
   clients cannot read records. Platform default grants are explicitly removed,
   including from the application's public migration ledger.
 - Invoker views `profile`, `entries` and `entry_evidence` respect underlying
@@ -105,8 +111,10 @@ to revoke all access tokens on other devices instantly.
 - Entry money crosses the API as decimal **strings** and is displayed through
   BigInt-based grouping, never floating-point conversion. Null facts stay null.
 - Statement-date ranges include all selected-source rows of matching bills.
-  Transaction-date ranges use printed transaction dates. Bounds are inclusive
-  and date-only strings are never shifted through UTC conversions.
+  Original extracted dates remain the default filter basis. An explicit Reviewed
+  dates option filters on verified corrections with source-value fallback. Corrected
+  values are shown alongside originals. Bounds are inclusive and date-only strings
+  are never shifted through UTC conversions.
 - The separate all-date Needs review queue includes issues, missing dates and
   competing imports. Candidates never silently enter selected-source views.
   Repeated purchases remain distinct rows.
@@ -114,7 +122,9 @@ to revoke all access tokens on other devices instantly.
   Loading/errors do not reuse misleading demo or previous-query results.
 - The initial live range is the latest available statement month; with no dated
   selected entries it uses the current local calendar month. Demo starts January
-  2026. Effective reviewed-date semantics must be agreed before writable review.
+  2026 only as an invented example; no live reconciliation period is fixed to it.
+  Statements belong to the calendar month in which the bank generated/issued them,
+  never purchase, payment-due, upload or parser-run months.
 - Tokens are tab-scoped in sessionStorage; financial rows are not persisted in
   browser storage. Refresh/expiry/sign-out discard stale view state. Text is
   React-escaped; no financial telemetry, remote fonts or third-party assets.
@@ -153,8 +163,8 @@ managed auth schema. Auth users/passwords/signing keys are **not** part of this
 app backup.
 
 Archives intentionally omit ACLs/ownership. A fresh restore must remain
-browser-denied until an operator re-applies the reviewed grants from migrations
-0002/0003, verifies RLS through the actual API, and reviews/relinks Auth subjects
+browser-denied until an operator re-applies the reviewed grants for
+the approved target schema, verifies RLS through the actual API, and reviews/relinks Auth subjects
 for the target project. Do not blindly assume an old provider UUID identifies
 the intended person in a new project. FUR-20 must validate this operational
 rollout before relying on a production backup.

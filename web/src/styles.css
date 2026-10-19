@@ -125,6 +125,17 @@ small {
   margin-top: 64px;
   margin-bottom: 14px;
 }
+.nav-item {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: #dbe8df;
+  margin: 3px 0;
+}
+.nav-item:hover {
+  background: #275346;
+}
 .nav-active {
   border-radius: 7px;
   background: #285142;
@@ -609,6 +620,157 @@ td .card-label {
 .login-card > .muted {
   font-size: 12px;
 }
+.source-list {
+  display: grid;
+  gap: 14px;
+  margin: 8px 0 28px;
+}
+.source-card {
+  display: flex;
+  gap: 18px;
+  padding: 22px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.source-card > div:first-child {
+  flex: 1;
+  min-width: 180px;
+  overflow-wrap: anywhere;
+}
+.source-card .form-actions {
+  margin: 0;
+}
+.source-state {
+  color: #507d60;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+.revision-review {
+  margin-top: 28px;
+  border: 1px solid #dae3d8;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.revision-review > .ledger {
+  margin: 18px;
+}
+.revision-review > .view-help {
+  padding: 14px 24px;
+}
+.revision-review select {
+  font: inherit;
+  min-width: 200px;
+  max-width: 320px;
+  padding: 8px;
+  border: 1px solid #d9e1d9;
+  border-radius: 6px;
+}
+.decision-form .check-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.decision-form .check-label input {
+  width: auto;
+  margin-top: 5px;
+}
+.source-metadata {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  padding: 20px 24px;
+  background: #f5f8f3;
+}
+.import-help {
+  margin: 20px 0;
+  padding: 16px;
+  background: #edf3e9;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.import-help summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.import-help p {
+  margin: 12px 0;
+}
+.import-help code {
+  font-size: 11px;
+  white-space: normal;
+}
+.label-page > p {
+  margin: 18px 0;
+  max-width: 620px;
+}
+.label-manager {
+  max-width: 860px;
+}
+.label-manager form {
+  padding: 26px;
+  border-bottom: 1px solid #e2e7df;
+}
+.label-manager fieldset {
+  border: 0;
+  padding: 16px 0 0;
+}
+.label-manager label,
+.decision-form label {
+  display: grid;
+  gap: 7px;
+  font-weight: 550;
+}
+.label-manager input,
+.decision-form input,
+.decision-form select,
+.decision-form textarea {
+  font: inherit;
+  border: 1px solid #d9e1d9;
+  border-radius: 7px;
+  padding: 10px;
+  background: white;
+  color: #202b29;
+  min-width: 0;
+  width: 100%;
+}
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+.label-list {
+  padding: 0;
+  list-style: none;
+}
+.label-list li {
+  padding: 18px 26px;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  border-top: 1px solid #edf0e9;
+}
+.label-list small {
+  display: block;
+}
+.decision-form {
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+}
+.decision-form fieldset {
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 18px;
+}
+.decision-form .decision-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 18px;
+}
 .login-card form {
   display: grid;
   gap: 17px;
@@ -701,8 +863,22 @@ td .card-label {
     height: 30px;
   }
   .nav-caption,
-  .sidebar-note,
-  .nav-active {
+  .sidebar-note {
+    display: none;
+  }
+  .sidebar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .nav-item {
+    width: auto;
+    padding: 8px;
+    font-size: 12px;
+  }
+  .sidebar .brand {
+    margin-right: auto;
+  }
+  .sidebar .profile {
     display: none;
   }
   .profile {

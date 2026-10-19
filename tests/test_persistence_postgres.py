@@ -8,7 +8,7 @@ from sqlalchemy import func, select, text, update
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from sqlalchemy.orm import undefer
 
-from core.persistence.models import Entry, ImportRecord, Statement
+from core.persistence.models import Base, Entry, ImportRecord, Statement
 from tests.persistence_fixture import PDF, new_entry, new_import, seed
 from tests.postgres_fixture import PostgresTests
 
@@ -194,7 +194,7 @@ class PersistencePostgresTests(PostgresTests):
                 "WHERE n.nspname='hisaab' AND c.relkind='r'"
             )
         ).all()
-        self.assertEqual(len(flags), 5)
+        self.assertEqual(len(flags), len(Base.metadata.tables))
         self.assertTrue(all(flag for _, flag in flags))
 
     def test_nonowner_role_cannot_read_even_with_table_grants(self):

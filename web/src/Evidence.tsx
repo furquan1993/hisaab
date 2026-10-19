@@ -151,8 +151,8 @@ export default function Evidence({
         </p>
       )}
       <p className="muted">
-        Source facts are read-only. Review corrections and assignments will be
-        added separately.
+        Extracted facts and flags stay unchanged. Verified corrections and
+        assignments are saved separately.
       </p>
     </aside>
   );

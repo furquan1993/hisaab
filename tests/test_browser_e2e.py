@@ -8,6 +8,9 @@ import unittest
 from pathlib import Path
 from urllib.request import urlopen
 
+from sqlalchemy.orm import Session
+
+from tests.persistence_fixture import PDF, new_entry, new_import
 from tests.supabase_fixture import SupabaseTests
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -18,6 +21,21 @@ ROOT = Path(__file__).resolve().parent.parent
 )
 class BrowserE2ETests(SupabaseTests):
     def test_real_password_login_reload_evidence_and_signout(self):
+        with Session(self.engine) as session:
+            original = self.records[0]
+            candidate = new_import(
+                original,
+                payload=PDF,
+                pdf_bytes=None,
+                source_import_id=original.imported.id,
+                source_filename=original.imported.source_filename,
+                parser_version="synthetic-browser-2",
+                issues=original.imported.issues,
+            )
+            session.add(candidate)
+            session.flush()
+            session.add(new_entry(candidate))
+            session.commit()
         environment = os.environ.copy()
         environment.update(
             VITE_SUPABASE_URL=self.api,

@@ -141,8 +141,11 @@ class SupabaseTests(unittest.TestCase):
 
     @classmethod
     def cleanup_records(cls):
+        from tests.decision_fixture import remove_decisions
+
         if cls.owners:
             with cls.engine.begin() as connection:
+                remove_decisions(connection, cls.owners)
                 connection.execute(delete(Entry).where(Entry.owner_id.in_(cls.owners)))
                 connection.execute(
                     update(Statement)

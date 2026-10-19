@@ -54,17 +54,19 @@ establish a backup before the first controlled hosted load.
 
 ## Static review workspace
 
-The read-only React + TypeScript + Vite workspace combines cards in statement-date
-and transaction-date views, with an all-date review queue and explicit source
-evidence/original retrieval. Supabase Auth and secured managed APIs provide the
+The static React + TypeScript + Vite workspace combines cards in statement-date
+and transaction-date views, with independent Account/Category assignments,
+reasoned corrections, separate statement coverage review, explicit parser-revision
+comparison, and original evidence/downloads. Original extracted facts stay unchanged. Supabase Auth and secured managed APIs provide the
 data path; no custom app server or privileged browser credentials.
 
 Start with `cd web`, `npm ci`, then `npm run dev`. Open
 http://127.0.0.1:5173/hisaab/ and choose **Explore synthetic demo**.
 See [setup, security, deployment and verification](docs/browser-workspace.md).
 New Auth/API migrations require separate reviewed rollout approval; they were
-not applied to the hosted project during implementation. Editing and real
-financial loading remain separately gated.
+not applied to the hosted project during implementation. The existing hosted
+release remains read-only until the new editing migrations are reviewed and
+separately approved. Additional real financial loads remain gated.
 
 ## Private database connection
 

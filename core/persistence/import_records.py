@@ -73,8 +73,22 @@ def duplicate(session, owner_id, card_id, digest):
             ImportRecord.owner_id == owner_id,
             ImportRecord.card_id == card_id,
             ImportRecord.file_sha256 == digest,
+            ImportRecord.source_import_id.is_(None),
         )
     )
+    if record is not None:
+        selected = session.scalar(
+            select(ImportRecord)
+            .join(Statement, Statement.active_import_id == ImportRecord.id)
+            .where(
+                Statement.id == record.statement_id,
+                Statement.owner_id == owner_id,
+                ImportRecord.file_sha256 == digest,
+                ImportRecord.owner_id == owner_id,
+            )
+        )
+        if selected is not None:
+            record = selected
     return result(session, record, "duplicate") if record is not None else None
 
 
@@ -105,6 +119,35 @@ def read_original(engine, owner_id, import_id):
             raise StoreError(
                 "import_not_found", "Import is not available for the selected owner."
             )
+        if record.source_import_id is not None:
+            source = session.scalar(
+                select(ImportRecord)
+                .options(undefer(ImportRecord.pdf_bytes))
+                .where(
+                    ImportRecord.owner_id == owner_id,
+                    ImportRecord.id == record.source_import_id,
+                )
+            )
+            if (
+                source is None
+                or source.source_import_id is not None
+                or (
+                    source.card_id,
+                    source.statement_id,
+                    source.file_sha256,
+                    source.file_size_bytes,
+                )
+                != (
+                    record.card_id,
+                    record.statement_id,
+                    record.file_sha256,
+                    record.file_size_bytes,
+                )
+            ):
+                raise StoreError(
+                    "pdf_integrity_failed", "Stored PDF source failed verification."
+                )
+            record = source
         if record.pdf_bytes is None:
             raise StoreError("pdf_not_retained", "Original PDF is no longer retained.")
         data = record.pdf_bytes

@@ -29,7 +29,7 @@ These requirements extend the local core beyond the initial parsing milestone:
 - Each entry can have one funding source, or remain unassigned pending review. Splitting one transaction across funding sources is deferred.
 - Funding sources can represent bank accounts, budget pots, or people. They are distinct from the card used and from spending categories.
 - Run reconciliation once all statements for the month are ready. Include all of that user's cards' statements for that reconciliation month; no manual statement-selection step is required.
-- Group by the month of the statements being reconciled, not the purchase's calendar month. Preserve each entry's original statement and card association.
+- Tag each statement to the calendar month in which the bank generated/issued it, using its printed generation/issue (statement) date, not purchase dates, payment due dates, upload time or parser-run time. This rule applies to every month; January was only an illustrative example, not a fixed reconciliation period. Preserve each entry's original statement and card association.
 - Combine allocations across cards into one monthly total per funding source, enabling one contribution rather than separate contributions for each card.
 - Mark the monthly funding-source group settled when that source has contributed its share. Settlement does not mean the credit-card bill has been paid.
 - Hisaab records settlement; it does not move money. The bank account receiving contributions is not relevant to this workflow.

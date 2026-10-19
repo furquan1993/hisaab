@@ -3,12 +3,14 @@ from sqlalchemy.exc import IntegrityError
 
 from core.persistence.models import Card, Entry, ImportRecord, Owner, Statement
 from core.persistence.session import transaction
+from tests.decision_fixture import remove_decisions
 from tests.persistence_fixture import new_entry, seed
 from tests.postgres_fixture import PostgresTests, test_engine
 
 
 def remove_synthetic_owner(engine, owner_id):
     with engine.begin() as connection:
+        remove_decisions(connection, [owner_id])
         connection.execute(
             update(Statement)
             .where(Statement.owner_id == owner_id)

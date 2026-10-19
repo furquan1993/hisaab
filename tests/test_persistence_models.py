@@ -10,7 +10,7 @@ from core.persistence.models import Base, Card, Entry, ImportRecord, Owner, Stat
 
 
 class ModelContractTests(unittest.TestCase):
-    def test_exactly_five_business_entities(self):
+    def test_five_immutable_evidence_entities_and_review_sidecars(self):
         self.assertEqual(
             set(Base.metadata.tables),
             {
@@ -19,6 +19,13 @@ class ModelContractTests(unittest.TestCase):
                 "hisaab.statements",
                 "hisaab.imports",
                 "hisaab.entries",
+                "hisaab.categories",
+                "hisaab.accounts",
+                "hisaab.entry_decisions",
+                "hisaab.decision_events",
+                "hisaab.parser_revisions",
+                "hisaab.entry_links",
+                "hisaab.import_reviews",
             },
         )
         configure_mappers()

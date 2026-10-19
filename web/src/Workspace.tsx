@@ -3,19 +3,50 @@ import { readPage, type BrowserClient } from "./client";
 import { demoEntries } from "./demo";
 import { filterEntries, formatAmount, type Entry, type View } from "./domain";
 import Evidence from "./Evidence";
+import Labels from "./Labels";
+import { useLabels } from "./useLabels";
+import AssignmentEditor, { type AssignmentPatch } from "./AssignmentEditor";
+import Imports from "./Imports";
+import ReviewEditor, { type ReviewSave } from "./ReviewEditor";
+import {
+  applyDemoReview,
+  reviewedValues,
+  requiresReview,
+  issueKey,
+} from "./review-domain";
+import type { StatementReviewSave } from "./StatementReview";
+import type { IdentityMapping } from "./revisions-client";
 
 export default function Workspace({
   api,
   owner,
+  ownerId,
   initialRange,
   onExit,
 }: {
   api: BrowserClient | null;
   owner: string;
+  ownerId?: string;
   initialRange: readonly [string, string];
   onExit: () => void;
 }) {
+  const [section, setSection] = useState<
+    "statements" | "account" | "category" | "imports"
+  >("statements");
+  const labelStore = useLabels(api, ownerId);
+  const [demoRows, setDemoRows] = useState(() =>
+    demoEntries.map((row) => ({ ...row })),
+  );
+  const [editing, setEditing] = useState<Entry | null>(null);
+  const [reviewing, setReviewing] = useState<Entry | null>(null);
+  const reviewTrigger = useRef<HTMLButtonElement | null>(null);
+  const [notice, setNotice] = useState("");
+  const editTrigger = useRef<HTMLButtonElement | null>(null);
+  const ledgerHeading = useRef<HTMLHeadingElement | null>(null);
   const [view, setView] = useState<View>("statement");
+  const [dateBasis, setDateBasis] = useState<"original" | "reviewed">(
+    "original",
+  );
   const [start, setStart] = useState(initialRange[0]),
     [end, setEnd] = useState(initialRange[1]);
   const [rows, setRows] = useState<Entry[]>([]),
@@ -37,9 +68,9 @@ export default function Workspace({
       setLoading(false);
       return;
     }
-    const filtered = filterEntries(demoEntries, view, start, end);
+    const filtered = filterEntries(demoRows, view, start, end, dateBasis);
     const promise = api
-      ? readPage(api, view, start, end, offset, controller.signal)
+      ? readPage(api, view, start, end, offset, controller.signal, dateBasis)
       : Promise.resolve({
           rows: filtered.slice(offset, offset + 50),
           total: filtered.length,
@@ -61,7 +92,148 @@ export default function Workspace({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [api, view, start, end, offset, invalid, refresh]);
+  }, [api, view, start, end, offset, invalid, refresh, demoRows, dateBasis]);
+  function demoSourceDecision(
+    candidate: string,
+    base: string | null,
+    mapping: IdentityMapping[] | null,
+  ) {
+    setDemoRows((current) =>
+      current.map((row): Entry => {
+        if (mapping === null)
+          return row.import_id === candidate
+            ? { ...row, source_state: "rejected", needs_review: false }
+            : row;
+        if (row.import_id === base)
+          return {
+            ...row,
+            is_selected: false,
+            source_state: "superseded",
+            needs_review: false,
+          };
+        if (row.import_id !== candidate) return row;
+        const previous = mapping.find(
+          (pair) => pair.new_entry_id === row.id,
+        )?.previous_entry_id;
+        const old = current.find((item) => item.id === previous);
+        return {
+          ...row,
+          is_selected: true,
+          source_state: "selected",
+          logical_entry_id: old?.logical_entry_id ?? old?.id ?? row.id,
+          category_id: old?.category_id ?? null,
+          account_id: old?.account_id ?? null,
+          decision_version: old?.decision_version ?? 0,
+          needs_review:
+            !row.transaction_date ||
+            !row.statement_date ||
+            row.entry_issues.length > 0 ||
+            row.import_issues.length > 0,
+        };
+      }),
+    );
+  }
+  function demoStatementReview(source: string, save: StatementReviewSave) {
+    setDemoRows((current) =>
+      current.map((row): Entry => {
+        if (row.import_id !== source) return row;
+        const date = save.date ?? row.statement_date;
+        const unresolved = row.import_issues.filter(
+          (issue) =>
+            !save.acknowledged.includes(issueKey(issue)) &&
+            !(
+              [
+                "statement_date_missing_or_invalid",
+                "statement_date_conflict",
+              ].includes(issue.code) && date
+            ),
+        );
+        const next = {
+          ...row,
+          effective_statement_date: date,
+          statement_date_override: save.date,
+          import_review_version: row.import_review_version + 1,
+          import_acknowledged: save.acknowledged,
+          unresolved_import_issues: unresolved,
+          import_review_stale: false,
+        };
+        return { ...next, needs_review: requiresReview(next) };
+      }),
+    );
+  }
+  async function saveReview(save: ReviewSave) {
+    if (!reviewing) return;
+    if (api) {
+      const { error } = await api.rpc("review_entry", {
+        p_entry_id: reviewing.id,
+        p_expected_version: reviewing.decision_version,
+        p_overrides: save.patch,
+        p_acknowledged: save.acknowledged,
+        p_reason: save.reason,
+        p_confirm_source: save.confirmSource,
+      });
+      if (error)
+        throw Error(
+          error.code === "PT409"
+            ? "The entry or source changed. Your draft is kept; close and refresh before reviewing the latest values."
+            : "Could not confirm the review. Check the values and reload before retrying.",
+        );
+      setRefresh((n) => n + 1);
+    } else
+      setDemoRows((current) =>
+        current.map((row) =>
+          row.id === reviewing.id
+            ? applyDemoReview(row, save.patch, save.acknowledged)
+            : row,
+        ),
+      );
+    setReviewing(null);
+    setNotice("Review saved. Original facts and flags are preserved.");
+    ledgerHeading.current?.focus();
+  }
+  async function saveAssignments(patch: AssignmentPatch) {
+    if (!editing) return;
+    if (api) {
+      const { error } = await api.rpc("save_entry_decision", {
+        p_entry_id: editing.id,
+        p_expected_version: editing.decision_version,
+        p_patch: patch,
+      });
+      if (error)
+        throw new Error(
+          error.code === "PT409"
+            ? "This entry changed. Cancel, refresh, and review the latest values before saving. Your draft has not overwritten them."
+            : "Could not confirm the save. Reload before retrying.",
+        );
+      setRefresh((n) => n + 1);
+    } else {
+      setDemoRows((current) =>
+        current.map((row) =>
+          (row.logical_entry_id ?? row.id) ===
+          (editing.logical_entry_id ?? editing.id)
+            ? { ...row, ...patch, decision_version: row.decision_version + 1 }
+            : row,
+        ),
+      );
+    }
+    setEditing(null);
+    setNotice(
+      "Assignments saved. Source facts and review issues are unchanged.",
+    );
+    ledgerHeading.current?.focus();
+  }
+  function labelName(
+    kind: "account" | "category",
+    id: string | null,
+    fallback: string | null,
+  ) {
+    return (
+      labelStore.labels.find((label) => label.kind === kind && label.id === id)
+        ?.name ??
+      fallback ??
+      "Unassigned"
+    );
+  }
   function changeView(next: View) {
     setView(next);
     setOffset(0);
@@ -81,9 +253,29 @@ export default function Workspace({
           <span className="brand-dot">●</span>
         </a>
         <p className="nav-caption">WORKSPACE</p>
-        <div className="nav-active">
-          <span>▤</span> Statements <span className="nav-dot">●</span>
-        </div>
+        {(
+          [
+            ["statements", "Statements"],
+            ["account", "Accounts"],
+            ["category", "Categories"],
+            ["imports", "Imports"],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            type="button"
+            key={value}
+            className={"nav-item " + (section === value ? "nav-active" : "")}
+            aria-current={section === value ? "page" : undefined}
+            onClick={() => {
+              setSection(value);
+              setReviewing(null);
+              setSelected(null);
+              setEditing(null);
+            }}
+          >
+            {label}
+          </button>
+        ))}
         <div className="sidebar-note">
           <span className="status-dot" /> Evidence preserved
           <p>
@@ -102,250 +294,417 @@ export default function Workspace({
         <header className="topbar">
           <span>
             Workspace <span className="crumb">/</span>{" "}
-            <strong>Statements</strong>
+            <strong>
+              {section === "statements"
+                ? "Statements"
+                : section === "account"
+                  ? "Accounts"
+                  : section === "imports"
+                    ? "Imports"
+                    : "Categories"}
+            </strong>
           </span>
           <button className="quiet" onClick={onExit}>
             {api ? "Sign out" : "Exit demo"}
           </button>
         </header>
-        <section className="page">
-          <div className="page-heading">
-            <div>
-              <span className="eyebrow">YOUR MONTH, IN FOCUS</span>
-              <h1>
-                All your cards.
-                <br />
-                <span>One clear picture.</span>
-              </h1>
-              <p>
-                Explore every entry, keep its evidence, and see what needs a
-                closer look.
-              </p>
-            </div>
-            <div className="read-only">
-              <span className="status-dot" /> READ-ONLY PREVIEW
-            </div>
-          </div>
-          {!api && (
-            <div className="demo-notice">
-              <strong>Synthetic demo</strong> • All names, amounts and documents
-              below are invented. No financial data is loaded.
-            </div>
-          )}
-          <div className="metrics">
-            <div>
-              <span>Matching entries</span>
-              <strong>{loading ? "…" : total}</strong>
-              <small>
-                {view === "review"
-                  ? "Across all dates"
-                  : "In the selected range"}
-              </small>
-            </div>
-            <div>
-              <span>Cards on this page</span>
-              <strong>{new Set(rows.map((r) => r.card_label)).size}</strong>
-              <small>Combined, with provenance</small>
-            </div>
-            <div>
-              <span>Flagged on this page</span>
-              <strong>{rows.filter((r) => r.needs_review).length}</strong>
-              <small>Issues, unknown dates or candidates</small>
-            </div>
-          </div>
-          <section className="ledger" aria-label="Statement entries">
-            <div className="ledger-heading">
+        {section === "imports" ? (
+          <Imports
+            api={api}
+            demoRows={demoRows}
+            onDemoDecision={demoSourceDecision}
+            onDemoCoverage={demoStatementReview}
+            onChanged={() => {
+              setRefresh((n) => n + 1);
+              setSelected(null);
+              setEditing(null);
+            }}
+          />
+        ) : section !== "statements" ? (
+          <Labels
+            key={section}
+            kind={section}
+            {...labelStore}
+            onSave={labelStore.save}
+            onReload={labelStore.reload}
+          />
+        ) : (
+          <section className="page">
+            <div className="page-heading">
               <div>
-                <h2>Statement entries</h2>
-                <p>Every row kept. Nothing silently combined.</p>
+                <span className="eyebrow">YOUR MONTH, IN FOCUS</span>
+                <h1>
+                  All your cards.
+                  <br />
+                  <span>One clear picture.</span>
+                </h1>
+                <p>
+                  Explore every entry, keep its evidence, and see what needs a
+                  closer look.
+                </p>
               </div>
-              <button
-                onClick={() => setRefresh((n) => n + 1)}
-                disabled={loading}
-              >
-                ↻ Refresh
-              </button>
-            </div>
-            <div className="toolbar">
-              <div role="tablist" aria-label="Date view">
-                {(
-                  [
-                    ["statement", "Statement date"],
-                    ["transaction", "Transaction date"],
-                    ["review", "Needs review"],
-                  ] as const
-                ).map(([mode, label]) => (
-                  <button
-                    role="tab"
-                    aria-selected={view === mode}
-                    key={mode}
-                    className={view === mode ? "active" : ""}
-                    onClick={() => changeView(mode)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div className="date-range">
-                <label>
-                  From
-                  <input
-                    type="date"
-                    value={start}
-                    disabled={view === "review"}
-                    onChange={(e) => changeRange(e.target.value, true)}
-                  />
-                </label>
-                <span>→</span>
-                <label>
-                  To
-                  <input
-                    type="date"
-                    value={end}
-                    disabled={view === "review"}
-                    onChange={(e) => changeRange(e.target.value, false)}
-                  />
-                </label>
+              <div className="read-only">
+                <span className="status-dot" />{" "}
+                {api ? "PRIVATE WORKSPACE" : "INTERACTIVE DEMO"}
               </div>
             </div>
-            <p className="view-help">
-              {view === "statement"
-                ? "Includes all entries from bills dated within this range, even transactions outside it."
-                : view === "transaction"
-                  ? "Includes selected-source entries whose printed transaction dates fall within this range."
-                  : "All-date review queue: unresolved issues, unknown dates and unselected candidate imports. Candidates are excluded from normal views."}
-            </p>
-            {invalid && view !== "review" && (
-              <p role="alert" className="error">
-                Choose a valid start and end date.
-              </p>
+            {!api && (
+              <div className="demo-notice">
+                <strong>Synthetic demo</strong> • All names, amounts and
+                documents below are invented. No financial data is loaded.
+              </div>
             )}
-            {error && (
-              <p role="alert" className="error">
-                {error}
-              </p>
-            )}
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Transaction</th>
-                    <th>Card & statement</th>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th className="amount">Amount</th>
-                    <th>Evidence</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.id}>
-                      <td>
-                        <strong>{row.description}</strong>
-                        <small>
-                          {row.needs_review
-                            ? "● Needs review"
-                            : "Selected source"}
-                          {!row.is_selected && " · Candidate"}
-                        </small>
-                      </td>
-                      <td>
-                        <strong className="card-label">{row.card_label}</strong>
-                        <small>
-                          {row.statement_date ?? "Statement date unknown"}
-                        </small>
-                      </td>
-                      <td className={!row.transaction_date ? "unknown" : ""}>
-                        {row.transaction_date ?? "Date unknown"}
-                      </td>
-                      <td>
-                        <span className={`type ${row.entry_type}`}>
-                          {row.entry_type}
-                        </span>
-                      </td>
-                      <td className={`amount ${row.direction ?? "unknown"}`}>
-                        {formatAmount(row.amount, row.currency, row.direction)}
-                      </td>
-                      <td>
-                        <button
-                          className="evidence-link"
-                          aria-label="View evidence"
-                          aria-expanded={selected?.id === row.id}
-                          aria-controls={
-                            selected?.id === row.id
-                              ? "source-evidence"
-                              : undefined
-                          }
-                          onClick={(event) => {
-                            evidenceTrigger.current = event.currentTarget;
-                            setSelected({ ...row });
-                          }}
-                        >
-                          View ↗
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {!loading && !error && rows.length === 0 && (
-                <div className="empty">
-                  <h3>No matching entries</h3>
-                  <p>
-                    Try another date range or check Needs review for undated
-                    entries and candidates.
-                  </p>
+            <div className="metrics">
+              <div>
+                <span>Matching entries</span>
+                <strong>{loading ? "…" : total}</strong>
+                <small>
+                  {view === "review"
+                    ? "Across all dates"
+                    : "In the selected range"}
+                </small>
+              </div>
+              <div>
+                <span>Cards on this page</span>
+                <strong>{new Set(rows.map((r) => r.card_label)).size}</strong>
+                <small>Combined, with provenance</small>
+              </div>
+              <div>
+                <span>Flagged on this page</span>
+                <strong>{rows.filter((r) => r.needs_review).length}</strong>
+                <small>Issues, unknown dates or candidates</small>
+              </div>
+            </div>
+            <section className="ledger" aria-label="Statement entries">
+              <div className="ledger-heading">
+                <div>
+                  <h2 ref={ledgerHeading} tabIndex={-1}>
+                    Statement entries
+                  </h2>
+                  <p>Every row kept. Nothing silently combined.</p>
                 </div>
-              )}
-              {loading && (
-                <p className="empty" role="status">
-                  Loading your entries…
+                <button
+                  onClick={() => setRefresh((n) => n + 1)}
+                  disabled={loading}
+                >
+                  ↻ Refresh
+                </button>
+              </div>
+              <div className="toolbar">
+                <div role="tablist" aria-label="Date view">
+                  {(
+                    [
+                      ["statement", "Statement date"],
+                      ["transaction", "Transaction date"],
+                      ["review", "Needs review"],
+                    ] as const
+                  ).map(([mode, label]) => (
+                    <button
+                      role="tab"
+                      aria-selected={view === mode}
+                      key={mode}
+                      className={view === mode ? "active" : ""}
+                      onClick={() => changeView(mode)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="date-range">
+                  <label>
+                    Filter dates
+                    <select
+                      aria-label="Filter dates"
+                      value={dateBasis}
+                      disabled={view === "review"}
+                      onChange={(event) => {
+                        setDateBasis(
+                          event.target.value as "original" | "reviewed",
+                        );
+                        setOffset(0);
+                        setSelected(null);
+                      }}
+                    >
+                      <option value="original">Original extracted dates</option>
+                      <option value="reviewed">Reviewed dates</option>
+                    </select>
+                  </label>
+                  <label>
+                    From
+                    <input
+                      type="date"
+                      value={start}
+                      disabled={view === "review"}
+                      onChange={(e) => changeRange(e.target.value, true)}
+                    />
+                  </label>
+                  <span>→</span>
+                  <label>
+                    To
+                    <input
+                      type="date"
+                      value={end}
+                      disabled={view === "review"}
+                      onChange={(e) => changeRange(e.target.value, false)}
+                    />
+                  </label>
+                </div>
+              </div>
+              <p className="view-help">
+                {view === "review"
+                  ? "All-date review queue: unresolved issues, unknown dates and unselected candidates. Superseded and rejected sources remain in Imports history."
+                  : (view === "statement"
+                      ? "Includes every entry from bills within the selected range. "
+                      : "Includes selected-source entries whose transaction dates fall within this range. ") +
+                    (dateBasis === "original"
+                      ? "Filtering uses original extracted dates; verified corrections are shown alongside them."
+                      : "Filtering uses reviewed dates, falling back to extracted values when no correction exists.")}
+              </p>
+              {invalid && view !== "review" && (
+                <p role="alert" className="error">
+                  Choose a valid start and end date.
                 </p>
               )}
-            </div>
-            <footer className="table-footer">
-              <span>
-                {total ? offset + 1 : 0}–{Math.min(offset + rows.length, total)}{" "}
-                of {total} entries
-              </span>
-              <div>
-                <button
-                  disabled={loading || offset === 0}
-                  onClick={() => {
-                    setOffset((n) => n - 50);
-                    setSelected(null);
-                  }}
-                >
-                  Previous
-                </button>
-                <button
-                  disabled={loading || offset + 50 >= total}
-                  onClick={() => {
-                    setOffset((n) => n + 50);
-                    setSelected(null);
-                  }}
-                >
-                  Next
-                </button>
+              {error && (
+                <p role="alert" className="error">
+                  {error}
+                </p>
+              )}
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Transaction</th>
+                      <th>Card & statement</th>
+                      <th>Date</th>
+                      <th>Type</th>
+                      <th>Account</th>
+                      <th>Category</th>
+                      <th className="amount">Amount</th>
+                      <th>Evidence</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => {
+                      const effective = reviewedValues(row);
+                      return (
+                        <tr key={row.id}>
+                          <td>
+                            <strong>{effective.description}</strong>
+                            {effective.description !== row.description && (
+                              <small>Extracted: {row.description}</small>
+                            )}
+                            <small>
+                              {row.needs_review
+                                ? "● Needs review"
+                                : "Selected source"}
+                              {!row.is_selected && " · Candidate"}
+                            </small>
+                          </td>
+                          <td>
+                            <strong className="card-label">
+                              {row.card_label}
+                            </strong>
+                            <small>
+                              {(row.effective_statement_date === undefined
+                                ? row.statement_date
+                                : row.effective_statement_date) ??
+                                "Statement date unknown"}
+                              {row.effective_statement_date !== undefined &&
+                                row.effective_statement_date !==
+                                  row.statement_date && (
+                                  <span>
+                                    {" "}
+                                    · Extracted:{" "}
+                                    {row.statement_date ?? "Unknown"}
+                                  </span>
+                                )}
+                            </small>
+                          </td>
+                          <td
+                            className={
+                              !effective.transaction_date ? "unknown" : ""
+                            }
+                          >
+                            {effective.transaction_date ?? "Date unknown"}
+                            {effective.transaction_date !==
+                              row.transaction_date && (
+                              <small>
+                                Extracted: {row.transaction_date ?? "Unknown"}
+                              </small>
+                            )}
+                          </td>
+                          <td>
+                            <span className={`type ${effective.entry_type}`}>
+                              {effective.entry_type}
+                            </span>
+                          </td>
+                          <td>
+                            {labelName(
+                              "account",
+                              row.account_id,
+                              row.account_name,
+                            )}
+                          </td>
+                          <td>
+                            {labelName(
+                              "category",
+                              row.category_id,
+                              row.category_name,
+                            )}
+                          </td>
+                          <td
+                            className={`amount ${effective.direction ?? "unknown"}`}
+                          >
+                            {formatAmount(
+                              effective.amount,
+                              effective.currency,
+                              effective.direction,
+                            )}
+                          </td>
+                          <td>
+                            <button
+                              className="evidence-link"
+                              aria-label="View evidence"
+                              aria-expanded={selected?.id === row.id}
+                              aria-controls={
+                                selected?.id === row.id
+                                  ? "source-evidence"
+                                  : undefined
+                              }
+                              onClick={(event) => {
+                                evidenceTrigger.current = event.currentTarget;
+                                setSelected({ ...row });
+                              }}
+                            >
+                              View ↗
+                            </button>
+                            <button
+                              type="button"
+                              aria-label="Edit entry"
+                              disabled={
+                                !row.is_selected ||
+                                labelStore.loading ||
+                                !!labelStore.error
+                              }
+                              onClick={(event) => {
+                                editTrigger.current = event.currentTarget;
+                                setReviewing(null);
+                                setEditing({ ...row });
+                              }}
+                            >
+                              Assign
+                            </button>
+                            <button
+                              type="button"
+                              aria-label="Review entry"
+                              disabled={
+                                !row.is_selected ||
+                                (!!api &&
+                                  row.effective_entry_type === undefined)
+                              }
+                              onClick={(event) => {
+                                reviewTrigger.current = event.currentTarget;
+                                setEditing(null);
+                                setReviewing({ ...row });
+                              }}
+                            >
+                              Review
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {!loading && !error && rows.length === 0 && (
+                  <div className="empty">
+                    <h3>No matching entries</h3>
+                    <p>
+                      Try another date range or check Needs review for undated
+                      entries and candidates.
+                    </p>
+                  </div>
+                )}
+                {loading && (
+                  <p className="empty" role="status">
+                    Loading your entries…
+                  </p>
+                )}
               </div>
-            </footer>
+              <footer className="table-footer">
+                <span>
+                  {total ? offset + 1 : 0}–
+                  {Math.min(offset + rows.length, total)} of {total} entries
+                </span>
+                <div>
+                  <button
+                    disabled={loading || offset === 0}
+                    onClick={() => {
+                      setOffset((n) => n - 50);
+                      setSelected(null);
+                    }}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    disabled={loading || offset + 50 >= total}
+                    onClick={() => {
+                      setOffset((n) => n + 50);
+                      setSelected(null);
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </footer>
+            </section>
+            <p className="page-foot">
+              <span className="status-dot" /> Source facts are immutable.
+              Accounts and Categories are independent. Assignments do not
+              resolve source issues.
+            </p>
+            {notice && (
+              <p role="status" className="demo-notice">
+                {notice}
+              </p>
+            )}
+            {reviewing && (
+              <ReviewEditor
+                key={reviewing.id}
+                row={reviewing}
+                onSave={saveReview}
+                onClose={() => {
+                  setReviewing(null);
+                  reviewTrigger.current?.focus();
+                }}
+              />
+            )}
+            {editing && (
+              <AssignmentEditor
+                key={editing.id}
+                row={editing}
+                labels={labelStore.labels}
+                onSave={saveAssignments}
+                onClose={() => {
+                  setEditing(null);
+                  editTrigger.current?.focus();
+                }}
+              />
+            )}
+            {selected && (
+              <Evidence
+                key={selected.id}
+                row={selected}
+                api={api}
+                onClose={() => {
+                  setSelected(null);
+                  evidenceTrigger.current?.focus();
+                }}
+              />
+            )}
           </section>
-          <p className="page-foot">
-            <span className="status-dot" /> Source facts are immutable.
-            Accounts, categories and review editing are the next milestone.
-          </p>
-          {selected && (
-            <Evidence
-              key={selected.id}
-              row={selected}
-              api={api}
-              onClose={() => {
-                setSelected(null);
-                evidenceTrigger.current?.focus();
-              }}
-            />
-          )}
-        </section>
+        )}
       </main>
     </div>
   );
