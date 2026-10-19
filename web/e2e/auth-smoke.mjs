@@ -46,6 +46,17 @@ try {
   await page.reload();
   await expect(page.getByRole("cell",{name:"Synthetic browser pot",exact:true})).toBeVisible();
   await expect(page.getByRole("cell",{name:"Synthetic browser category",exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Imports",exact:true}).click();
+  await page.getByRole("button",{name:"Review candidate",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"Compare statement sources",exact:true})).toBeFocused();
+  await page.getByLabel("Revision reason",{exact:true}).fill("Synthetic explicitly reviewed browser revision");
+  await page.getByRole("button",{name:"Accept reviewed source",exact:true}).click();
+  await expect(page.getByText("Published source updated. Earlier evidence and decisions remain in history.",{exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Statements",exact:true}).click();
+  await expect(page.getByRole("cell",{name:"Synthetic browser pot",exact:true})).toBeVisible();
+  await expect(page.getByRole("cell",{name:"Synthetic browser category",exact:true})).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("cell",{name:"Synthetic browser pot",exact:true})).toBeVisible();
   await page.getByRole("tab", { name: "Transaction date" }).click();
   await page.getByText("SYNTHETIC SHOP", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
@@ -54,7 +65,7 @@ try {
     throw Error("Private row survived sign-out");
   if (failures.length) throw Error("Browser encountered an uncaught error");
   console.log(
-    "Real Auth browser smoke passed: login, evidence, independent assignments, persisted reload, date view, logout.",
+    "Real Auth browser smoke passed: login, evidence, assignments, reviewed source revision, persisted reload, date view, logout.",
   );
 } finally {
   await browser.close();

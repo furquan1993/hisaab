@@ -96,7 +96,7 @@ export function useLabels(api: BrowserClient | null) {
     }
     if (mounted.current)
       setLabels((current) => [
-        ...current.filter((l) => l.id !== saved.id),
+        ...current.filter((l) => l.id !== saved.id || l.kind !== saved.kind),
         saved,
       ]);
     return saved;

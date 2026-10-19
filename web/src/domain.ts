@@ -26,6 +26,9 @@ export const entrySchema = z.object({
   entry_issues: z.array(z.object({ code: z.string() }).passthrough()),
   import_issues: z.array(z.object({ code: z.string() }).passthrough()),
   review_status: z.string(),
+  source_state: z
+    .enum(["selected", "candidate", "superseded", "rejected"])
+    .optional(),
   logical_entry_id: z.string().optional(),
   decision_version: z.number().int().nonnegative().default(0),
   category_id: z.string().nullable().default(null),

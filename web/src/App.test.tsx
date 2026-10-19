@@ -83,6 +83,58 @@ it("saves independent entry assignments without clearing a source issue", async 
   const persisted = screen.getByText("Credit • purpose unclear").closest("tr")!;
   expect(within(persisted).getByText("Household pot")).toBeTruthy();
 });
+it("reviews and rejects a candidate import without replacing published entries", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(
+    screen.getByRole("button", { name: "Explore synthetic demo" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Imports" }));
+  await user.click(screen.getByRole("button", { name: "Review candidate" }));
+  expect(
+    screen.getByRole("heading", { name: "Compare statement sources" }),
+  ).toBeTruthy();
+  await user.type(
+    screen.getByLabelText("Revision reason"),
+    "Synthetic candidate is incomplete",
+  );
+  await user.click(screen.getByRole("button", { name: "Reject candidate" }));
+  expect(screen.getByText("rejected")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Statements" }));
+  await user.click(screen.getByRole("tab", { name: "Needs review" }));
+  expect(screen.queryByText("Corner coffee • alternate file")).toBeNull();
+  await user.click(screen.getByRole("tab", { name: "Statement date" }));
+  expect(screen.getAllByText("Corner coffee")).toHaveLength(2);
+});
+it("requires explicit identity and removal review before replacing a source", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(
+    screen.getByRole("button", { name: "Explore synthetic demo" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Imports" }));
+  await user.click(screen.getByRole("button", { name: "Review candidate" }));
+  await user.click(
+    screen.getByRole("button", { name: "Accept reviewed source" }),
+  );
+  expect(screen.getByRole("alert")).toBeTruthy();
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: /Identity for candidate row/ }),
+    "new",
+  );
+  await user.click(screen.getByRole("checkbox", { name: /removed rows/ }));
+  await user.type(
+    screen.getByLabelText("Revision reason"),
+    "Synthetic explicitly reviewed replacement",
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Accept reviewed source" }),
+  );
+  expect(screen.getByText("superseded")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Statements" }));
+  expect(screen.getByText("Corner coffee • alternate file")).toBeTruthy();
+  expect(screen.queryAllByText("Corner coffee")).toHaveLength(0);
+});
 it("renders evidence as text without offering fake PDF downloads", async () => {
   const user = userEvent.setup();
   render(<App />);

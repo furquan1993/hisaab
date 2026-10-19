@@ -6,6 +6,8 @@ import Evidence from "./Evidence";
 import Labels from "./Labels";
 import { useLabels } from "./useLabels";
 import AssignmentEditor, { type AssignmentPatch } from "./AssignmentEditor";
+import Imports from "./Imports";
+import type { IdentityMapping } from "./revisions-client";
 
 export default function Workspace({
   api,
@@ -18,9 +20,9 @@ export default function Workspace({
   initialRange: readonly [string, string];
   onExit: () => void;
 }) {
-  const [section, setSection] = useState<"statements" | "account" | "category">(
-    "statements",
-  );
+  const [section, setSection] = useState<
+    "statements" | "account" | "category" | "imports"
+  >("statements");
   const labelStore = useLabels(api);
   const [demoRows, setDemoRows] = useState(() =>
     demoEntries.map((row) => ({ ...row })),
@@ -76,6 +78,46 @@ export default function Workspace({
       });
     return () => controller.abort();
   }, [api, view, start, end, offset, invalid, refresh, demoRows]);
+  function demoSourceDecision(
+    candidate: string,
+    base: string | null,
+    mapping: IdentityMapping[] | null,
+  ) {
+    setDemoRows((current) =>
+      current.map((row): Entry => {
+        if (mapping === null)
+          return row.import_id === candidate
+            ? { ...row, source_state: "rejected", needs_review: false }
+            : row;
+        if (row.import_id === base)
+          return {
+            ...row,
+            is_selected: false,
+            source_state: "superseded",
+            needs_review: false,
+          };
+        if (row.import_id !== candidate) return row;
+        const previous = mapping.find(
+          (pair) => pair.new_entry_id === row.id,
+        )?.previous_entry_id;
+        const old = current.find((item) => item.id === previous);
+        return {
+          ...row,
+          is_selected: true,
+          source_state: "selected",
+          logical_entry_id: old?.logical_entry_id ?? old?.id ?? row.id,
+          category_id: old?.category_id ?? null,
+          account_id: old?.account_id ?? null,
+          decision_version: old?.decision_version ?? 0,
+          needs_review:
+            !row.transaction_date ||
+            !row.statement_date ||
+            row.entry_issues.length > 0 ||
+            row.import_issues.length > 0,
+        };
+      }),
+    );
+  }
   async function saveAssignments(patch: AssignmentPatch) {
     if (!editing) return;
     if (api) {
@@ -94,7 +136,8 @@ export default function Workspace({
     } else {
       setDemoRows((current) =>
         current.map((row) =>
-          row.id === editing.id
+          (row.logical_entry_id ?? row.id) ===
+          (editing.logical_entry_id ?? editing.id)
             ? { ...row, ...patch, decision_version: row.decision_version + 1 }
             : row,
         ),
@@ -106,9 +149,14 @@ export default function Workspace({
     );
     ledgerHeading.current?.focus();
   }
-  function labelName(id: string | null, fallback: string | null) {
+  function labelName(
+    kind: "account" | "category",
+    id: string | null,
+    fallback: string | null,
+  ) {
     return (
-      labelStore.labels.find((label) => label.id === id)?.name ??
+      labelStore.labels.find((label) => label.kind === kind && label.id === id)
+        ?.name ??
       fallback ??
       "Unassigned"
     );
@@ -137,6 +185,7 @@ export default function Workspace({
             ["statements", "Statements"],
             ["account", "Accounts"],
             ["category", "Categories"],
+            ["imports", "Imports"],
           ] as const
         ).map(([value, label]) => (
           <button
@@ -176,14 +225,27 @@ export default function Workspace({
                 ? "Statements"
                 : section === "account"
                   ? "Accounts"
-                  : "Categories"}
+                  : section === "imports"
+                    ? "Imports"
+                    : "Categories"}
             </strong>
           </span>
           <button className="quiet" onClick={onExit}>
             {api ? "Sign out" : "Exit demo"}
           </button>
         </header>
-        {section !== "statements" ? (
+        {section === "imports" ? (
+          <Imports
+            api={api}
+            demoRows={demoRows}
+            onDemoDecision={demoSourceDecision}
+            onChanged={() => {
+              setRefresh((n) => n + 1);
+              setSelected(null);
+              setEditing(null);
+            }}
+          />
+        ) : section !== "statements" ? (
           <Labels
             key={section}
             kind={section}
@@ -354,8 +416,20 @@ export default function Workspace({
                             {row.entry_type}
                           </span>
                         </td>
-                        <td>{labelName(row.account_id, row.account_name)}</td>
-                        <td>{labelName(row.category_id, row.category_name)}</td>
+                        <td>
+                          {labelName(
+                            "account",
+                            row.account_id,
+                            row.account_name,
+                          )}
+                        </td>
+                        <td>
+                          {labelName(
+                            "category",
+                            row.category_id,
+                            row.category_name,
+                          )}
+                        </td>
                         <td className={`amount ${row.direction ?? "unknown"}`}>
                           {formatAmount(
                             row.amount,

@@ -620,6 +620,86 @@ td .card-label {
 .login-card > .muted {
   font-size: 12px;
 }
+.source-list {
+  display: grid;
+  gap: 14px;
+  margin: 8px 0 28px;
+}
+.source-card {
+  display: flex;
+  gap: 18px;
+  padding: 22px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.source-card > div:first-child {
+  flex: 1;
+  min-width: 180px;
+  overflow-wrap: anywhere;
+}
+.source-card .form-actions {
+  margin: 0;
+}
+.source-state {
+  color: #507d60;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+.revision-review {
+  margin-top: 28px;
+  border: 1px solid #dae3d8;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.revision-review > .ledger {
+  margin: 18px;
+}
+.revision-review > .view-help {
+  padding: 14px 24px;
+}
+.revision-review select {
+  font: inherit;
+  min-width: 200px;
+  max-width: 320px;
+  padding: 8px;
+  border: 1px solid #d9e1d9;
+  border-radius: 6px;
+}
+.decision-form .check-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.decision-form .check-label input {
+  width: auto;
+  margin-top: 5px;
+}
+.source-metadata {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  padding: 20px 24px;
+  background: #f5f8f3;
+}
+.import-help {
+  margin: 20px 0;
+  padding: 16px;
+  background: #edf3e9;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.import-help summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.import-help p {
+  margin: 12px 0;
+}
+.import-help code {
+  font-size: 11px;
+  white-space: normal;
+}
 .label-page > p {
   margin: 18px 0;
   max-width: 620px;
