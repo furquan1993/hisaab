@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 from uuid import uuid4
 
-from sqlalchemy import delete, update
+from sqlalchemy import delete, text, update
 from sqlalchemy.orm import Session
 
 from core.persistence.models import Card, Entry, ImportRecord, Statement
@@ -148,6 +148,10 @@ class ReconciliationHTTPTests(ReconciliationFixture):
     def test_totals_include_all_entries_not_only_one_transaction_page(self):
         for sequence in range(2, 54):
             self.add(sequence=sequence, amount=Decimal("0.10"))
+        # Representative planner statistics matter on the fresh CI database;
+        # keep this completeness check independent of autovacuum timing.
+        with self.engine.begin() as connection:
+            connection.execute(text("ANALYZE hisaab.entries, hisaab.entry_decisions, hisaab.assignment_examples"))
         row = self.totals()[0]
         self.assertEqual(Decimal(row["net"]), Decimal("105.20"))
         self.assertEqual(row["entry_count"], 53)
