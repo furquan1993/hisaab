@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { entrySchema, type View } from "./domain";
+import { entrySchema, type View, type DateBasis } from "./domain";
 
 import { validatePublicConfig } from "./public-config";
 export { validatePublicConfig } from "./public-config";
@@ -31,11 +31,14 @@ export async function readPage(
   end: string,
   offset: number,
   signal: AbortSignal,
+  basis: DateBasis = "original",
 ) {
   let query = api.from("entries").select("*", { count: "exact" });
   if (view === "review") query = query.eq("needs_review", true);
   else {
-    const field = view === "statement" ? "statement_date" : "transaction_date";
+    const field =
+      (basis === "reviewed" ? "effective_" : "") +
+      (view === "statement" ? "statement_date" : "transaction_date");
     query = query.eq("is_selected", true).gte(field, start).lte(field, end);
   }
   const { data, error, count } = await query

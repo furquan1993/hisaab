@@ -224,6 +224,23 @@ class DecisionHTTPTests(SupabaseTests):
         )
         self.assertEqual(code, 422)
 
+    def test_stale_browser_owner_context_cannot_create_a_label_after_account_switch(
+        self,
+    ):
+        code, _ = self.call(
+            "/rpc/save_label",
+            self.tokens[1],
+            method="POST",
+            data={
+                "p_kind": "account",
+                "p_name": "Synthetic stale private label",
+                "p_expected_owner": str(self.owners[0]),
+            },
+        )
+        self.assertEqual(code, 409)
+        _, labels = self.call("/labels", self.tokens[1])
+        self.assertEqual(labels, [])
+
     def test_invalid_versions_owner_claims_and_anonymous_writes_are_denied(self):
         code, _ = self.call(
             "/rpc/save_label",

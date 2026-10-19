@@ -49,13 +49,14 @@ def upgrade():
         REVOKE ALL ON hisaab_api.labels FROM PUBLIC;
         CREATE FUNCTION hisaab_api.save_label(
             p_kind text,p_name text,p_id uuid DEFAULT NULL,
-            p_expected_version integer DEFAULT 0,p_archived boolean DEFAULT false
+            p_expected_version integer DEFAULT 0,p_archived boolean DEFAULT false,p_expected_owner uuid DEFAULT NULL
         ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=''
         AS $$
         DECLARE owner uuid:=hisaab.current_owner_id(); target text;
                 saved jsonb; current_version integer; duplicate_name boolean;
         BEGIN
             IF owner IS NULL THEN RAISE SQLSTATE '42501' USING MESSAGE='Owner is not configured'; END IF;
+            IF p_expected_owner IS NOT NULL AND p_expected_owner<>owner THEN RAISE SQLSTATE 'PT409' USING MESSAGE='Signed-in owner changed; reload before saving'; END IF;
             IF p_kind NOT IN ('category','account') OR p_kind IS NULL OR
                p_name IS NULL OR length(btrim(p_name)) NOT BETWEEN 1 AND 120 OR
                p_name ~ '[[:cntrl:]]' OR p_archived IS NULL OR p_expected_version IS NULL OR p_expected_version<0 THEN
@@ -87,16 +88,16 @@ def upgrade():
             END IF;
             RETURN (saved-'owner_id'-'created_at')||jsonb_build_object('kind',p_kind);
         END $$;
-        REVOKE ALL ON FUNCTION hisaab_api.save_label(text,text,uuid,integer,boolean) FROM PUBLIC;
+        REVOKE ALL ON FUNCTION hisaab_api.save_label(text,text,uuid,integer,boolean,uuid) FROM PUBLIC;
         DO $$ BEGIN
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='anon') THEN
                 REVOKE ALL ON hisaab.categories,hisaab.accounts,hisaab_api.labels FROM anon;
-                REVOKE ALL ON FUNCTION hisaab_api.save_label(text,text,uuid,integer,boolean) FROM anon;
+                REVOKE ALL ON FUNCTION hisaab_api.save_label(text,text,uuid,integer,boolean,uuid) FROM anon;
             END IF;
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN
                 REVOKE ALL ON hisaab.categories,hisaab.accounts,hisaab_api.labels FROM authenticated;
                 GRANT SELECT ON hisaab.categories,hisaab.accounts,hisaab_api.labels TO authenticated;
-                GRANT EXECUTE ON FUNCTION hisaab_api.save_label(text,text,uuid,integer,boolean) TO authenticated;
+                GRANT EXECUTE ON FUNCTION hisaab_api.save_label(text,text,uuid,integer,boolean,uuid) TO authenticated;
             END IF;
         END $$;
         NOTIFY pgrst,'reload schema';
@@ -105,7 +106,7 @@ def upgrade():
 
 def downgrade():
     op.execute(
-        "DROP FUNCTION hisaab_api.save_label(text,text,uuid,integer,boolean); DROP VIEW hisaab_api.labels"
+        "DROP FUNCTION IF EXISTS hisaab_api.save_label(text,text,uuid,integer,boolean,uuid); DROP FUNCTION IF EXISTS hisaab_api.save_label(text,text,uuid,integer,boolean); DROP VIEW hisaab_api.labels"
     )
     op.drop_table("accounts", schema="hisaab")
     op.drop_table("categories", schema="hisaab")

@@ -16,6 +16,14 @@ export const sourceSchema = z.object({
   entry_count: z.number().int().nonnegative(),
   state: z.enum(["selected", "candidate", "superseded", "rejected"]),
   source_import_id: z.string().nullable(),
+  effective_statement_date: z.string().nullable().optional(),
+  import_review_version: z.number().int().nonnegative().default(0),
+  import_acknowledged: z.array(z.string()).default([]),
+  statement_date_override: z.string().nullable().optional(),
+  import_review_stale: z.boolean().default(false),
+  unresolved_import_issues: z
+    .array(z.object({ code: z.string() }).passthrough())
+    .optional(),
   issues: z.array(z.object({ code: z.string() }).passthrough()),
 });
 export type Source = z.infer<typeof sourceSchema>;
@@ -99,6 +107,13 @@ export function demoSources(rows: Entry[]): Source[] {
       entry_count: entries.length,
       state: row.source_state ?? (row.is_selected ? "selected" : "candidate"),
       source_import_id: null,
+      effective_statement_date:
+        row.effective_statement_date ?? row.statement_date,
+      import_review_version: row.import_review_version,
+      import_acknowledged: row.import_acknowledged,
+      statement_date_override: row.statement_date_override,
+      import_review_stale: row.import_review_stale,
+      unresolved_import_issues: row.unresolved_import_issues,
       issues: row.import_issues,
     };
   });

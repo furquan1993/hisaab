@@ -135,6 +135,91 @@ it("requires explicit identity and removal review before replacing a source", as
   expect(screen.getByText("Corner coffee • alternate file")).toBeTruthy();
   expect(screen.queryAllByText("Corner coffee")).toHaveLength(0);
 });
+it("reviews an unknown entry type without rewriting its original evidence", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(
+    screen.getByRole("button", { name: "Explore synthetic demo" }),
+  );
+  await user.click(screen.getByRole("tab", { name: "Needs review" }));
+  const row = screen.getByText("Credit • purpose unclear").closest("tr")!;
+  await user.click(within(row).getByRole("button", { name: "Review entry" }));
+  await user.selectOptions(
+    screen.getByLabelText("Reviewed entry type"),
+    "refund",
+  );
+  await user.type(
+    screen.getByLabelText("Review reason"),
+    "Synthetic original confirms a refund",
+  );
+  await user.click(screen.getByRole("button", { name: "Save review" }));
+  expect(screen.queryByText("Credit • purpose unclear")).toBeNull();
+  await user.click(screen.getByRole("tab", { name: "Statement date" }));
+  const saved = screen.getByText("Credit • purpose unclear").closest("tr")!;
+  expect(within(saved).getByText("refund")).toBeTruthy();
+  await user.click(
+    within(saved).getByRole("button", { name: "View evidence" }),
+  );
+  expect(
+    within(
+      screen.getByRole("complementary", { name: "Source evidence" }),
+    ).getByText("unknown"),
+  ).toBeTruthy();
+});
+it("keeps original date filtering available alongside reviewed dates", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(
+    screen.getByRole("button", { name: "Explore synthetic demo" }),
+  );
+  await user.click(screen.getByRole("tab", { name: "Needs review" }));
+  await user.click(
+    within(screen.getByText("Tax • no printed date").closest("tr")!).getByRole(
+      "button",
+      { name: "Review entry" },
+    ),
+  );
+  await user.type(
+    screen.getByLabelText("Reviewed transaction date"),
+    "2026-01-25",
+  );
+  await user.type(
+    screen.getByLabelText("Review reason"),
+    "Synthetic checked the original tax date",
+  );
+  await user.click(screen.getByRole("button", { name: "Save review" }));
+  await user.click(screen.getByRole("tab", { name: "Transaction date" }));
+  expect(screen.queryByText("Tax • no printed date")).toBeNull();
+  await user.selectOptions(screen.getByLabelText("Filter dates"), "reviewed");
+  expect(screen.getByText("Tax • no printed date")).toBeTruthy();
+  expect(screen.getByText("2026-01-25")).toBeTruthy();
+});
+it("reviews statement dates separately while retaining original-date browsing", async () => {
+  const user = userEvent.setup();
+  render(<App />);
+  await user.click(
+    screen.getByRole("button", { name: "Explore synthetic demo" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Imports" }));
+  await user.click(
+    screen.getAllByRole("button", { name: "Review statement" })[0],
+  );
+  await user.type(
+    screen.getByLabelText("Corrected statement date (optional)"),
+    "2026-02-01",
+  );
+  await user.type(
+    screen.getByLabelText("Statement review reason"),
+    "Synthetic verified bill date",
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Save statement review" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Statements" }));
+  expect(screen.getByText("Weekend bookstore")).toBeTruthy();
+  await user.selectOptions(screen.getByLabelText("Filter dates"), "reviewed");
+  expect(screen.queryByText("Weekend bookstore")).toBeNull();
+});
 it("renders evidence as text without offering fake PDF downloads", async () => {
   const user = userEvent.setup();
   render(<App />);

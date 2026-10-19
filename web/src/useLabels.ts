@@ -12,7 +12,7 @@ export const labelSchema = z.object({
 export type Label = z.infer<typeof labelSchema>;
 export type LabelDraft = Omit<Label, "id"> & { id: string | null };
 
-export function useLabels(api: BrowserClient | null) {
+export function useLabels(api: BrowserClient | null, ownerId?: string) {
   const [labels, setLabels] = useState<Label[]>([]);
   const [loading, setLoading] = useState(!!api);
   const [error, setError] = useState("");
@@ -62,7 +62,10 @@ export function useLabels(api: BrowserClient | null) {
   async function save(draft: LabelDraft) {
     let saved: Label;
     if (api) {
+      if (!ownerId)
+        throw Error("Reload your signed-in workspace before saving.");
       const { data, error } = await api.rpc("save_label", {
+        p_expected_owner: ownerId,
         p_kind: draft.kind,
         p_name: draft.name,
         p_id: draft.id,

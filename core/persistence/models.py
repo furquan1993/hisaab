@@ -33,6 +33,7 @@ from core.persistence.decisions import (
     EntryDecision,
     FundingAccount,
 )
+from core.persistence.review import ImportReview
 from core.persistence.revisions import EntryLink, ParserRevision
 
 __all__ = [
@@ -46,6 +47,7 @@ __all__ = [
     "ParserRevision",
     "FundingAccount",
     "ImportRecord",
+    "ImportReview",
     "Owner",
     "Statement",
 ]

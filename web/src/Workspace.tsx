@@ -7,31 +7,46 @@ import Labels from "./Labels";
 import { useLabels } from "./useLabels";
 import AssignmentEditor, { type AssignmentPatch } from "./AssignmentEditor";
 import Imports from "./Imports";
+import ReviewEditor, { type ReviewSave } from "./ReviewEditor";
+import {
+  applyDemoReview,
+  reviewedValues,
+  requiresReview,
+  issueKey,
+} from "./review-domain";
+import type { StatementReviewSave } from "./StatementReview";
 import type { IdentityMapping } from "./revisions-client";
 
 export default function Workspace({
   api,
   owner,
+  ownerId,
   initialRange,
   onExit,
 }: {
   api: BrowserClient | null;
   owner: string;
+  ownerId?: string;
   initialRange: readonly [string, string];
   onExit: () => void;
 }) {
   const [section, setSection] = useState<
     "statements" | "account" | "category" | "imports"
   >("statements");
-  const labelStore = useLabels(api);
+  const labelStore = useLabels(api, ownerId);
   const [demoRows, setDemoRows] = useState(() =>
     demoEntries.map((row) => ({ ...row })),
   );
   const [editing, setEditing] = useState<Entry | null>(null);
+  const [reviewing, setReviewing] = useState<Entry | null>(null);
+  const reviewTrigger = useRef<HTMLButtonElement | null>(null);
   const [notice, setNotice] = useState("");
   const editTrigger = useRef<HTMLButtonElement | null>(null);
   const ledgerHeading = useRef<HTMLHeadingElement | null>(null);
   const [view, setView] = useState<View>("statement");
+  const [dateBasis, setDateBasis] = useState<"original" | "reviewed">(
+    "original",
+  );
   const [start, setStart] = useState(initialRange[0]),
     [end, setEnd] = useState(initialRange[1]);
   const [rows, setRows] = useState<Entry[]>([]),
@@ -53,9 +68,9 @@ export default function Workspace({
       setLoading(false);
       return;
     }
-    const filtered = filterEntries(demoRows, view, start, end);
+    const filtered = filterEntries(demoRows, view, start, end, dateBasis);
     const promise = api
-      ? readPage(api, view, start, end, offset, controller.signal)
+      ? readPage(api, view, start, end, offset, controller.signal, dateBasis)
       : Promise.resolve({
           rows: filtered.slice(offset, offset + 50),
           total: filtered.length,
@@ -77,7 +92,7 @@ export default function Workspace({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [api, view, start, end, offset, invalid, refresh, demoRows]);
+  }, [api, view, start, end, offset, invalid, refresh, demoRows, dateBasis]);
   function demoSourceDecision(
     candidate: string,
     base: string | null,
@@ -117,6 +132,64 @@ export default function Workspace({
         };
       }),
     );
+  }
+  function demoStatementReview(source: string, save: StatementReviewSave) {
+    setDemoRows((current) =>
+      current.map((row): Entry => {
+        if (row.import_id !== source) return row;
+        const date = save.date ?? row.statement_date;
+        const unresolved = row.import_issues.filter(
+          (issue) =>
+            !save.acknowledged.includes(issueKey(issue)) &&
+            !(
+              [
+                "statement_date_missing_or_invalid",
+                "statement_date_conflict",
+              ].includes(issue.code) && date
+            ),
+        );
+        const next = {
+          ...row,
+          effective_statement_date: date,
+          statement_date_override: save.date,
+          import_review_version: row.import_review_version + 1,
+          import_acknowledged: save.acknowledged,
+          unresolved_import_issues: unresolved,
+          import_review_stale: false,
+        };
+        return { ...next, needs_review: requiresReview(next) };
+      }),
+    );
+  }
+  async function saveReview(save: ReviewSave) {
+    if (!reviewing) return;
+    if (api) {
+      const { error } = await api.rpc("review_entry", {
+        p_entry_id: reviewing.id,
+        p_expected_version: reviewing.decision_version,
+        p_overrides: save.patch,
+        p_acknowledged: save.acknowledged,
+        p_reason: save.reason,
+        p_confirm_source: save.confirmSource,
+      });
+      if (error)
+        throw Error(
+          error.code === "PT409"
+            ? "The entry or source changed. Your draft is kept; close and refresh before reviewing the latest values."
+            : "Could not confirm the review. Check the values and reload before retrying.",
+        );
+      setRefresh((n) => n + 1);
+    } else
+      setDemoRows((current) =>
+        current.map((row) =>
+          row.id === reviewing.id
+            ? applyDemoReview(row, save.patch, save.acknowledged)
+            : row,
+        ),
+      );
+    setReviewing(null);
+    setNotice("Review saved. Original facts and flags are preserved.");
+    ledgerHeading.current?.focus();
   }
   async function saveAssignments(patch: AssignmentPatch) {
     if (!editing) return;
@@ -195,6 +268,7 @@ export default function Workspace({
             aria-current={section === value ? "page" : undefined}
             onClick={() => {
               setSection(value);
+              setReviewing(null);
               setSelected(null);
               setEditing(null);
             }}
@@ -239,6 +313,7 @@ export default function Workspace({
             api={api}
             demoRows={demoRows}
             onDemoDecision={demoSourceDecision}
+            onDemoCoverage={demoStatementReview}
             onChanged={() => {
               setRefresh((n) => n + 1);
               setSelected(null);
@@ -337,6 +412,24 @@ export default function Workspace({
                 </div>
                 <div className="date-range">
                   <label>
+                    Filter dates
+                    <select
+                      aria-label="Filter dates"
+                      value={dateBasis}
+                      disabled={view === "review"}
+                      onChange={(event) => {
+                        setDateBasis(
+                          event.target.value as "original" | "reviewed",
+                        );
+                        setOffset(0);
+                        setSelected(null);
+                      }}
+                    >
+                      <option value="original">Original extracted dates</option>
+                      <option value="reviewed">Reviewed dates</option>
+                    </select>
+                  </label>
+                  <label>
                     From
                     <input
                       type="date"
@@ -358,11 +451,14 @@ export default function Workspace({
                 </div>
               </div>
               <p className="view-help">
-                {view === "statement"
-                  ? "Includes all entries from bills dated within this range, even transactions outside it."
-                  : view === "transaction"
-                    ? "Includes selected-source entries whose printed transaction dates fall within this range."
-                    : "All-date review queue: unresolved issues, unknown dates and unselected candidate imports. Candidates are excluded from normal views."}
+                {view === "review"
+                  ? "All-date review queue: unresolved issues, unknown dates and unselected candidates. Superseded and rejected sources remain in Imports history."
+                  : (view === "statement"
+                      ? "Includes every entry from bills within the selected range. "
+                      : "Includes selected-source entries whose transaction dates fall within this range. ") +
+                    (dateBasis === "original"
+                      ? "Filtering uses original extracted dates; verified corrections are shown alongside them."
+                      : "Filtering uses reviewed dates, falling back to extracted values when no correction exists.")}
               </p>
               {invalid && view !== "review" && (
                 <p role="alert" className="error">
@@ -389,89 +485,136 @@ export default function Workspace({
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((row) => (
-                      <tr key={row.id}>
-                        <td>
-                          <strong>{row.description}</strong>
-                          <small>
-                            {row.needs_review
-                              ? "● Needs review"
-                              : "Selected source"}
-                            {!row.is_selected && " · Candidate"}
-                          </small>
-                        </td>
-                        <td>
-                          <strong className="card-label">
-                            {row.card_label}
-                          </strong>
-                          <small>
-                            {row.statement_date ?? "Statement date unknown"}
-                          </small>
-                        </td>
-                        <td className={!row.transaction_date ? "unknown" : ""}>
-                          {row.transaction_date ?? "Date unknown"}
-                        </td>
-                        <td>
-                          <span className={`type ${row.entry_type}`}>
-                            {row.entry_type}
-                          </span>
-                        </td>
-                        <td>
-                          {labelName(
-                            "account",
-                            row.account_id,
-                            row.account_name,
-                          )}
-                        </td>
-                        <td>
-                          {labelName(
-                            "category",
-                            row.category_id,
-                            row.category_name,
-                          )}
-                        </td>
-                        <td className={`amount ${row.direction ?? "unknown"}`}>
-                          {formatAmount(
-                            row.amount,
-                            row.currency,
-                            row.direction,
-                          )}
-                        </td>
-                        <td>
-                          <button
-                            className="evidence-link"
-                            aria-label="View evidence"
-                            aria-expanded={selected?.id === row.id}
-                            aria-controls={
-                              selected?.id === row.id
-                                ? "source-evidence"
-                                : undefined
+                    {rows.map((row) => {
+                      const effective = reviewedValues(row);
+                      return (
+                        <tr key={row.id}>
+                          <td>
+                            <strong>{effective.description}</strong>
+                            {effective.description !== row.description && (
+                              <small>Extracted: {row.description}</small>
+                            )}
+                            <small>
+                              {row.needs_review
+                                ? "● Needs review"
+                                : "Selected source"}
+                              {!row.is_selected && " · Candidate"}
+                            </small>
+                          </td>
+                          <td>
+                            <strong className="card-label">
+                              {row.card_label}
+                            </strong>
+                            <small>
+                              {(row.effective_statement_date === undefined
+                                ? row.statement_date
+                                : row.effective_statement_date) ??
+                                "Statement date unknown"}
+                              {row.effective_statement_date !== undefined &&
+                                row.effective_statement_date !==
+                                  row.statement_date && (
+                                  <span>
+                                    {" "}
+                                    · Extracted:{" "}
+                                    {row.statement_date ?? "Unknown"}
+                                  </span>
+                                )}
+                            </small>
+                          </td>
+                          <td
+                            className={
+                              !effective.transaction_date ? "unknown" : ""
                             }
-                            onClick={(event) => {
-                              evidenceTrigger.current = event.currentTarget;
-                              setSelected({ ...row });
-                            }}
                           >
-                            View ↗
-                          </button>
-                          <button
-                            type="button"
-                            aria-label="Edit entry"
-                            disabled={
-                              !row.is_selected ||
-                              labelStore.loading ||
-                              !!labelStore.error
-                            }
-                            onClick={(event) => {
-                              editTrigger.current = event.currentTarget;
-                              setEditing({ ...row });
-                            }}
+                            {effective.transaction_date ?? "Date unknown"}
+                            {effective.transaction_date !==
+                              row.transaction_date && (
+                              <small>
+                                Extracted: {row.transaction_date ?? "Unknown"}
+                              </small>
+                            )}
+                          </td>
+                          <td>
+                            <span className={`type ${effective.entry_type}`}>
+                              {effective.entry_type}
+                            </span>
+                          </td>
+                          <td>
+                            {labelName(
+                              "account",
+                              row.account_id,
+                              row.account_name,
+                            )}
+                          </td>
+                          <td>
+                            {labelName(
+                              "category",
+                              row.category_id,
+                              row.category_name,
+                            )}
+                          </td>
+                          <td
+                            className={`amount ${effective.direction ?? "unknown"}`}
                           >
-                            Edit
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                            {formatAmount(
+                              effective.amount,
+                              effective.currency,
+                              effective.direction,
+                            )}
+                          </td>
+                          <td>
+                            <button
+                              className="evidence-link"
+                              aria-label="View evidence"
+                              aria-expanded={selected?.id === row.id}
+                              aria-controls={
+                                selected?.id === row.id
+                                  ? "source-evidence"
+                                  : undefined
+                              }
+                              onClick={(event) => {
+                                evidenceTrigger.current = event.currentTarget;
+                                setSelected({ ...row });
+                              }}
+                            >
+                              View ↗
+                            </button>
+                            <button
+                              type="button"
+                              aria-label="Edit entry"
+                              disabled={
+                                !row.is_selected ||
+                                labelStore.loading ||
+                                !!labelStore.error
+                              }
+                              onClick={(event) => {
+                                editTrigger.current = event.currentTarget;
+                                setReviewing(null);
+                                setEditing({ ...row });
+                              }}
+                            >
+                              Assign
+                            </button>
+                            <button
+                              type="button"
+                              aria-label="Review entry"
+                              disabled={
+                                !row.is_selected ||
+                                (!!api &&
+                                  row.effective_entry_type === undefined)
+                              }
+                              onClick={(event) => {
+                                reviewTrigger.current = event.currentTarget;
+                                setEditing(null);
+                                setReviewing({ ...row });
+                              }}
+                            >
+                              Review
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
                 {!loading && !error && rows.length === 0 && (
@@ -525,6 +668,17 @@ export default function Workspace({
               <p role="status" className="demo-notice">
                 {notice}
               </p>
+            )}
+            {reviewing && (
+              <ReviewEditor
+                key={reviewing.id}
+                row={reviewing}
+                onSave={saveReview}
+                onClose={() => {
+                  setReviewing(null);
+                  reviewTrigger.current?.focus();
+                }}
+              />
             )}
             {editing && (
               <AssignmentEditor

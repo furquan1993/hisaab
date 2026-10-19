@@ -36,10 +36,10 @@ $$;
 
 CREATE FUNCTION hisaab.prepare_revision_for_owner(p_owner uuid,p_candidate uuid) RETURNS jsonb
 LANGUAGE plpgsql SET search_path='' AS $$
-DECLARE candidate hisaab.imports; bill hisaab.statements; saved hisaab.parser_revisions; next_version integer;
+DECLARE candidate record; bill hisaab.statements; saved hisaab.parser_revisions; next_version integer;
 BEGIN
  IF p_owner IS NULL THEN RAISE SQLSTATE '42501' USING MESSAGE='Owner is not configured'; END IF;
- SELECT i.* INTO candidate FROM hisaab.imports i WHERE i.owner_id=p_owner AND i.id=p_candidate;
+ SELECT i.id,i.statement_id INTO candidate FROM hisaab.imports i WHERE i.owner_id=p_owner AND i.id=p_candidate;
  IF NOT FOUND THEN RAISE SQLSTATE 'PT404' USING MESSAGE='Candidate is unavailable'; END IF;
  SELECT * INTO bill FROM hisaab.statements WHERE owner_id=p_owner AND id=candidate.statement_id FOR UPDATE;
  IF bill.active_import_id=p_candidate OR EXISTS(SELECT 1 FROM hisaab.parser_revisions r

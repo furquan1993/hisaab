@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { BrowserClient } from "./client";
 import type { Entry } from "./domain";
 import Evidence from "./Evidence";
+import StatementReview, { type StatementReviewSave } from "./StatementReview";
 import RevisionReview, { SourceTable } from "./RevisionReview";
 import {
   demoSources,
@@ -17,6 +18,7 @@ export default function Imports({
   api,
   demoRows,
   onDemoDecision,
+  onDemoCoverage,
   onChanged,
 }: {
   api: BrowserClient | null;
@@ -26,8 +28,10 @@ export default function Imports({
     base: string | null,
     mapping: IdentityMapping[] | null,
   ) => void;
+  onDemoCoverage: (source: string, save: StatementReviewSave) => void;
   onChanged: () => void;
 }) {
+  const [statementReview, setStatementReview] = useState<Source | null>(null);
   const [sources, setSources] = useState<Source[]>([]),
     [refresh, setRefresh] = useState(0);
   const [loading, setLoading] = useState(true),
@@ -64,6 +68,31 @@ export default function Imports({
       });
     return () => controller.abort();
   }, [api, demoRows, refresh]);
+  async function saveStatement(save: StatementReviewSave) {
+    if (!statementReview) return;
+    if (api) {
+      const { error } = await api.rpc("review_import", {
+        p_import_id: statementReview.id,
+        p_expected_version: statementReview.import_review_version,
+        p_acknowledged: save.acknowledged,
+        p_reason: save.reason,
+        p_statement_date: save.date,
+      });
+      if (error)
+        throw Error(
+          error.code === "PT409"
+            ? "This statement review changed. Close, reload, and review the latest source."
+            : "Could not confirm statement review. Check the date and coverage selections.",
+        );
+    } else onDemoCoverage(statementReview.id, save);
+    setStatementReview(null);
+    setRefresh((n) => n + 1);
+    onChanged();
+    setNotice(
+      "Statement review saved. Original dates and warnings remain preserved.",
+    );
+    heading.current?.focus();
+  }
   async function open(source: Source, compare: boolean) {
     request.current?.abort();
     const controller = new AbortController();
@@ -266,6 +295,24 @@ export default function Imports({
               >
                 Inspect extraction
               </button>
+              {source.state === "selected" && (
+                <button
+                  type="button"
+                  disabled={
+                    opening ||
+                    loading ||
+                    (!!api && source.effective_statement_date === undefined)
+                  }
+                  onClick={() => {
+                    setComparison(null);
+                    setInspection(null);
+                    setEvidence(null);
+                    setStatementReview(source);
+                  }}
+                >
+                  Review statement
+                </button>
+              )}
               {source.state === "candidate" && (
                 <button
                   type="button"
@@ -279,6 +326,17 @@ export default function Imports({
           </article>
         ))}
       </div>
+      {statementReview && (
+        <StatementReview
+          key={statementReview.id}
+          source={statementReview}
+          onSave={saveStatement}
+          onClose={() => {
+            setStatementReview(null);
+            heading.current?.focus();
+          }}
+        />
+      )}
       {comparison && (
         <RevisionReview
           key={comparison.revision.id}

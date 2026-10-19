@@ -9,6 +9,7 @@ export default function App() {
   const previousUser = useRef<string | null>(null);
   const [mode, setMode] = useState<"login" | "demo" | "account">("login");
   const [session, setSession] = useState<Session | null>(null);
+  const [ownerId, setOwnerId] = useState("");
   const [owner, setOwner] = useState(""),
     [range, setRange] = useState<readonly [string, string]>([
       "2026-01-01",
@@ -25,6 +26,7 @@ export default function App() {
     const { data } = client.auth.onAuthStateChange((_event, next) => {
       if (previousUser.current !== next?.user.id) {
         setOwner("");
+        setOwnerId("");
         setError("");
       }
       previousUser.current = next?.user.id ?? null;
@@ -71,6 +73,7 @@ export default function App() {
         z.array(z.object({ statement_date: z.string() })).parse(latest.data)[0]
           ?.statement_date ?? fallback;
       setRange(monthRange(date));
+      setOwnerId(profile.data[0].id);
       setOwner(profile.data[0].display_name);
     })().catch((cause) => {
       if (!controller.signal.aborted)
@@ -100,6 +103,7 @@ export default function App() {
   }
   async function signOut() {
     setOwner("");
+    setOwnerId("");
     setSession(null);
     setMode("login");
     setError("");
@@ -127,6 +131,7 @@ export default function App() {
         key={session.user.id}
         api={client}
         owner={owner}
+        ownerId={ownerId}
         initialRange={range}
         onExit={signOut}
       />

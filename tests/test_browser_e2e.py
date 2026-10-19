@@ -30,6 +30,7 @@ class BrowserE2ETests(SupabaseTests):
                 source_import_id=original.imported.id,
                 source_filename=original.imported.source_filename,
                 parser_version="synthetic-browser-2",
+                issues=original.imported.issues,
             )
             session.add(candidate)
             session.flush()

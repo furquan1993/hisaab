@@ -35,20 +35,58 @@ export const entrySchema = z.object({
   category_name: z.string().nullable().default(null),
   account_id: z.string().nullable().default(null),
   account_name: z.string().nullable().default(null),
+  overrides: z.record(z.string(), z.string()).default({}),
+  applied_overrides: z.record(z.string(), z.string()).default({}),
+  applied_acknowledged: z.array(z.string()).default([]),
+  review_stale: z.boolean().default(false),
+  effective_transaction_date: date.optional(),
+  original_transaction_time: z.string().nullable().optional(),
+  effective_transaction_time: z.string().nullable().optional(),
+  effective_statement_date: date.optional(),
+  printed_statement_date: date.optional(),
+  effective_description: z.string().optional(),
+  effective_amount: z
+    .string()
+    .regex(/^\d+\.\d{2}$/)
+    .nullable()
+    .optional(),
+  effective_direction: z.enum(["debit", "credit"]).nullable().optional(),
+  effective_currency: z.string().nullable().optional(),
+  effective_entry_type: z.string().optional(),
+  unresolved_entry_issues: z
+    .array(z.object({ code: z.string() }).passthrough())
+    .optional(),
+  unresolved_import_issues: z
+    .array(z.object({ code: z.string() }).passthrough())
+    .optional(),
+  import_review_version: z.number().int().nonnegative().default(0),
+  import_acknowledged: z.array(z.string()).default([]),
+  import_review_stale: z.boolean().default(false),
+  statement_date_override: date.optional(),
+  decision_reason: z.string().nullable().optional(),
+  demo_review_signature: z.string().optional(),
 });
 export type Entry = z.infer<typeof entrySchema>;
 export type View = "statement" | "transaction" | "review";
+export type DateBasis = "original" | "reviewed";
 
 export function filterEntries(
   rows: Entry[],
   view: View,
   start: string,
   end: string,
+  basis: DateBasis = "original",
 ) {
   return rows.filter((row) => {
     if (view === "review") return row.needs_review;
-    const date =
+    const original =
       view === "statement" ? row.statement_date : row.transaction_date;
+    const effective =
+      view === "statement"
+        ? row.effective_statement_date
+        : row.effective_transaction_date;
+    const date =
+      basis === "reviewed" && effective !== undefined ? effective : original;
     return row.is_selected && date !== null && date >= start && date <= end;
   });
 }
