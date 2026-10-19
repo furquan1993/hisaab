@@ -317,3 +317,134 @@ it("filters demo transactions by assignments and description together", async ()
     expect(screen.queryByLabelText(`Account for ${description}`)).toBeNull(),
   );
 });
+
+it("bulk updates account then category without changing the other assignment", async () => {
+  const user = userEvent.setup();
+  const rows = [0, 1].map((i) => ({
+    ...demoEntries[0],
+    id: `bulk-${i}`,
+    description: `Bulk expense ${i}`,
+    is_selected: true,
+    account_id: null,
+    category_id: null,
+  }));
+  vi.mocked(readPage).mockResolvedValue({ rows, total: 2 });
+  const rpc = vi
+    .fn()
+    .mockResolvedValueOnce({
+      data: { account_id: "pot", category_id: null, version: 1 },
+      error: null,
+    })
+    .mockResolvedValueOnce({
+      data: { account_id: "pot", category_id: null, version: 1 },
+      error: null,
+    })
+    .mockResolvedValue({
+      data: { account_id: "pot", category_id: "food", version: 2 },
+      error: null,
+    });
+  render(
+    <Workspace
+      api={{ rpc } as unknown as BrowserClient}
+      owner="Owner"
+      initialRange={["2026-01-01", "2026-01-31"]}
+      onExit={() => {}}
+    />,
+  );
+  await screen.findByText("Bulk expense 0");
+  await user.click(
+    screen.getByRole("button", { name: "Select all on this page" }),
+  );
+  expect(screen.queryByRole("button", { name: "Edit entry" })).toBeNull();
+  await user.selectOptions(
+    screen.getByLabelText("Account for selected transactions"),
+    "pot",
+  );
+  await user.click(screen.getByRole("button", { name: "Set account" }));
+  await screen.findByText(
+    "2 of 2 transactions updated. Categories and trips unchanged.",
+  );
+  expect(
+    (screen.getByLabelText("Account for Bulk expense 0") as HTMLSelectElement)
+      .value,
+  ).toBe("pot");
+  await user.click(screen.getByLabelText("Select transaction Bulk expense 0"));
+  await user.selectOptions(
+    screen.getByLabelText("Category for selected transactions"),
+    "food",
+  );
+  await user.click(screen.getByRole("button", { name: "Set category" }));
+  await screen.findByText(
+    "1 of 1 transactions updated. Accounts and trips unchanged.",
+  );
+  expect(rpc.mock.calls[2][1]).toEqual({
+    p_entry_id: "bulk-0",
+    p_expected_version: 1,
+    p_patch: { category_id: "food" },
+  });
+  expect(
+    (screen.getByLabelText("Account for Bulk expense 0") as HTMLSelectElement)
+      .value,
+  ).toBe("pot");
+  expect(
+    (screen.getByLabelText("Category for Bulk expense 1") as HTMLSelectElement)
+      .value,
+  ).toBe("");
+});
+
+it("clears bulk selection when filtering and reports a partially saved batch", async () => {
+  const user = userEvent.setup();
+  const rows = [0, 1, 2].map((i) => ({
+    ...demoEntries[0],
+    id: `partial-${i}`,
+    description: `Partial ${i}`,
+    is_selected: i !== 2,
+    account_id: null,
+    category_id: null,
+  }));
+  vi.mocked(readPage).mockResolvedValue({ rows, total: 3 });
+  const rpc = vi
+    .fn()
+    .mockResolvedValueOnce({
+      data: { account_id: "pot", category_id: null, version: 1 },
+      error: null,
+    })
+    .mockResolvedValueOnce({ error: { code: "PT409" } });
+  render(
+    <Workspace
+      api={{ rpc } as unknown as BrowserClient}
+      owner="Owner"
+      initialRange={["2026-01-01", "2026-01-31"]}
+      onExit={() => {}}
+    />,
+  );
+  await screen.findByText("Partial 0");
+  expect(
+    (screen.getByLabelText("Select transaction Partial 2") as HTMLInputElement)
+      .disabled,
+  ).toBe(true);
+  await user.click(
+    screen.getByRole("button", { name: "Select all on this page" }),
+  );
+  expect(screen.getByText("2 selected on this page")).toBeTruthy();
+  await user.selectOptions(
+    screen.getByLabelText("Filter by category"),
+    "unassigned",
+  );
+  await screen.findByText("0 selected on this page");
+  await user.click(
+    screen.getByRole("button", { name: "Select all on this page" }),
+  );
+  await user.selectOptions(
+    screen.getByLabelText("Account for selected transactions"),
+    "pot",
+  );
+  await user.click(screen.getByRole("button", { name: "Set account" }));
+  await screen.findByText(
+    "1 of 2 transactions updated. Categories and trips unchanged.",
+  );
+  expect((await screen.findByRole("alert")).textContent).toContain(
+    "batch stopped",
+  );
+  expect(rpc).toHaveBeenCalledTimes(2);
+});

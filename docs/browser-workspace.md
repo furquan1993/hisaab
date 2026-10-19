@@ -285,3 +285,19 @@ Filters combine with each other, description search and the selected date view.
 They apply before pagination, so **Matching entries** counts every matching row.
 Changing either filter returns to the first page. Changing an entry's assignment
 while filtering refreshes the list so entries that no longer match disappear.
+
+
+### Bulk account and category updates
+
+In **Statements**, tick transaction checkboxes or use **Select all on this page**.
+Choose **Account for selected transactions** and **Set account**, or choose
+**Category for selected transactions** and **Set category**. **Unassigned** clears
+that field. Only active labels can be assigned. Each action preserves the other
+assignment and trip membership, and teaches the same future matches as an
+individual edit.
+
+Selection covers the current page (up to 50) and clears when filters, dates,
+sorting or pages change. Candidate sources cannot be selected. Saves use each
+transaction's expected version and run individually; a failure stops the batch.
+The result reports confirmed updates, which remain saved. Refresh before
+retrying an unconfirmed save, then select the remaining transactions again.

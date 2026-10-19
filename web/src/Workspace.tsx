@@ -17,6 +17,7 @@ import Spending, { type SpendingFocus } from "./Spending";
 import { useSpending } from "./useSpending";
 import EntryTripEditor from "./EntryTripEditor";
 import { assignEntries } from "./auto-assignments";
+import { saveBulkAssignments } from "./bulk-assignments";
 import type { Confirmation, Contribution } from "./funding-domain";
 import Evidence from "./Evidence";
 import FriendlyDescriptionEditor from "./FriendlyDescriptionEditor";
@@ -69,6 +70,10 @@ export default function Workspace({
   }
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [bulkSelection, setBulkSelection] = useState<Set<string>>(new Set());
+  const [bulkAccount, setBulkAccount] = useState("");
+  const [bulkCategory, setBulkCategory] = useState("");
+  const [bulkNotice, setBulkNotice] = useState("");
   const [assignmentError, setAssignmentError] = useState("");
   const pendingFocus = useRef<string | null>(null);
   const [editing, setEditing] = useState<Entry | null>(null);
@@ -118,6 +123,7 @@ export default function Workspace({
   useEffect(() => {
     const controller = new AbortController();
     setRows([]);
+    setBulkSelection(new Set());
     setTotal(0);
     setAutoAssignmentNotice("");
     setError("");
@@ -450,6 +456,61 @@ export default function Workspace({
       setRefresh((n) => n + 1);
     }
   }
+  async function saveBulk(kind: "account" | "category") {
+    const choice = kind === "account" ? bulkAccount : bulkCategory;
+    const chosen = rows.filter(
+      (row) => row.is_selected && bulkSelection.has(row.id),
+    );
+    if (!choice || !chosen.length || saving) return;
+    const value = choice === "unassigned" ? null : choice;
+    if (
+      value &&
+      !labelStore.labels.some(
+        (label) =>
+          label.kind === kind && label.id === value && !label.is_archived,
+      )
+    )
+      return;
+    setSaving(true);
+    setBulkNotice("");
+    setAssignmentError("");
+    resetDetails();
+    try {
+      const result = await saveBulkAssignments(api, chosen, kind, value);
+      const update = (current: Entry[]) =>
+        current.map((row) => {
+          const saved = result.saved.find((entry) => entry.id === row.id);
+          return saved
+            ? {
+                ...row,
+                account_id: saved.account_id,
+                category_id: saved.category_id,
+                decision_version: saved.decision_version,
+                [`${kind}_name`]:
+                  labelStore.labels.find((label) => label.id === value)?.name ??
+                  null,
+              }
+            : row;
+        });
+      if (!api) demoRows.current = update(demoRows.current);
+      setRows(update);
+      setBulkSelection(new Set());
+      setBulkNotice(
+        `${result.saved.length} of ${chosen.length} transactions updated. ${kind === "account" ? "Categories" : "Accounts"} and trips unchanged.`,
+      );
+      if (result.error)
+        setAssignmentError(
+          result.error +
+            " The batch stopped; remaining transactions were not attempted.",
+        );
+      if (result.saved.length && (accountFilter || categoryFilter)) {
+        setOffset(0);
+        setRefresh((n) => n + 1);
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
   function assignmentSelect(row: Entry, kind: "account" | "category") {
     const field = kind === "account" ? "account_id" : "category_id";
     const current = row[field] ?? "";
@@ -554,9 +615,10 @@ export default function Workspace({
             key={value}
             className={"nav-item " + (section === value ? "nav-active" : "")}
             aria-current={section === value ? "page" : undefined}
-            disabled={fundingBusy || spendingStore.busy}
+            disabled={saving || fundingBusy || spendingStore.busy}
             onClick={() => {
               setSection(value);
+              setBulkSelection(new Set());
               if (value === "spending") setSpendingFocus(undefined);
               resetDetails();
             }}
@@ -598,7 +660,7 @@ export default function Workspace({
                           : "Categories"}
             </strong>
           </span>
-          <button className="quiet" onClick={onExit}>
+          <button className="quiet" disabled={saving} onClick={onExit}>
             {api ? "Sign out" : "Exit demo"}
           </button>
         </header>
@@ -756,12 +818,12 @@ export default function Workspace({
                     resetDetails();
                     setRefresh((n) => n + 1);
                   }}
-                  disabled={loading}
+                  disabled={loading || saving}
                 >
                   ↻ Refresh
                 </button>
               </div>
-              <div className="toolbar">
+              <fieldset disabled={saving} className="toolbar statement-filters">
                 <div role="tablist" aria-label="Date view">
                   {(
                     [
@@ -916,7 +978,96 @@ export default function Workspace({
                     />
                   </label>
                 </div>
+              </fieldset>
+              <div
+                className="bulk-assignments"
+                aria-label="Bulk transaction assignments"
+              >
+                <span aria-live="polite">
+                  {bulkSelection.size} selected on this page
+                </span>
+                <button
+                  type="button"
+                  disabled={
+                    loading || saving || !rows.some((row) => row.is_selected)
+                  }
+                  onClick={() =>
+                    setBulkSelection(
+                      new Set(
+                        rows
+                          .filter((row) => row.is_selected)
+                          .map((row) => row.id),
+                      ),
+                    )
+                  }
+                >
+                  Select all on this page
+                </button>
+                <button
+                  type="button"
+                  disabled={saving || !bulkSelection.size}
+                  onClick={() => setBulkSelection(new Set())}
+                >
+                  Clear selection
+                </button>
+                {(["account", "category"] as const).map((kind) => (
+                  <div className="bulk-assignment-action" key={kind}>
+                    <label>
+                      {kind === "account"
+                        ? "Account for selected transactions"
+                        : "Category for selected transactions"}
+                      <select
+                        value={kind === "account" ? bulkAccount : bulkCategory}
+                        disabled={
+                          saving ||
+                          loading ||
+                          labelStore.loading ||
+                          !!labelStore.error
+                        }
+                        onChange={(event) =>
+                          kind === "account"
+                            ? setBulkAccount(event.target.value)
+                            : setBulkCategory(event.target.value)
+                        }
+                      >
+                        <option value="">Choose {kind}</option>
+                        <option value="unassigned">Unassigned</option>
+                        {labelStore.labels
+                          .filter(
+                            (label) =>
+                              label.kind === kind && !label.is_archived,
+                          )
+                          .sort((a, b) => compareLabelNames(a.name, b.name))
+                          .map((label) => (
+                            <option key={label.id} value={label.id}>
+                              {label.name}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      disabled={
+                        saving ||
+                        loading ||
+                        !bulkSelection.size ||
+                        !(kind === "account" ? bulkAccount : bulkCategory) ||
+                        labelStore.loading ||
+                        !!labelStore.error
+                      }
+                      onClick={() => void saveBulk(kind)}
+                    >
+                      Set {kind}
+                    </button>
+                  </div>
+                ))}
+                {saving && <span role="status">Saving assignments…</span>}
               </div>
+              {bulkNotice && (
+                <p role="status" className="demo-notice">
+                  {bulkNotice}
+                </p>
+              )}
               <p className="view-help">
                 {view === "review"
                   ? "All-date review queue: unresolved issues, unknown dates and unselected candidates. Superseded and rejected sources remain in Imports history."
@@ -946,6 +1097,7 @@ export default function Workspace({
                 <table>
                   <thead>
                     <tr>
+                      <th scope="col">Select</th>
                       <th>Transaction</th>
                       <th>Card & statement</th>
                       <th>Date</th>
@@ -968,12 +1120,29 @@ export default function Workspace({
                             onClick={(event) => {
                               if (
                                 !(event.target as HTMLElement).closest(
-                                  "button, select",
+                                  "button, select, input, label",
                                 )
                               )
                                 toggleRow(row.id);
                             }}
                           >
+                            <td>
+                              <input
+                                type="checkbox"
+                                aria-label={`Select transaction ${row.friendly_description ?? effective.description}`}
+                                checked={bulkSelection.has(row.id)}
+                                disabled={saving || loading || !row.is_selected}
+                                onChange={(event) => {
+                                  const checked = event.target.checked;
+                                  setBulkSelection((current) => {
+                                    const next = new Set(current);
+                                    if (checked) next.add(row.id);
+                                    else next.delete(row.id);
+                                    return next;
+                                  });
+                                }}
+                              />
+                            </td>
                             <td>
                               <div className="entry-summary">
                                 <button
@@ -1082,7 +1251,7 @@ export default function Workspace({
                           </tr>
                           {expandedId === row.id && (
                             <tr className="entry-detail-row">
-                              <td colSpan={7}>
+                              <td colSpan={8}>
                                 <div
                                   id={"entry-details-" + row.id}
                                   className="entry-details"
@@ -1322,7 +1491,7 @@ export default function Workspace({
                 </span>
                 <div>
                   <button
-                    disabled={loading || offset === 0}
+                    disabled={saving || loading || offset === 0}
                     onClick={() => {
                       setOffset((n) => n - 50);
                       resetDetails();
@@ -1331,7 +1500,7 @@ export default function Workspace({
                     Previous
                   </button>
                   <button
-                    disabled={loading || offset + 50 >= total}
+                    disabled={saving || loading || offset + 50 >= total}
                     onClick={() => {
                       setOffset((n) => n + 50);
                       resetDetails();

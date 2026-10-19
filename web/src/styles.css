@@ -1831,3 +1831,28 @@ td .card-label {
   min-width: 0;
   max-width: 220px;
 }
+
+.statement-filters {
+  border: 0;
+  margin: 0;
+  min-width: 0;
+}
+.bulk-assignments {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border, #e3e8e1);
+}
+.bulk-assignment-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+.bulk-assignment-action label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
