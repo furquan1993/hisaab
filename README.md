@@ -35,6 +35,11 @@ See the [common contract and HDFC guide](docs/hdfc-parser.md) and [SBI/YES Bank 
 
 ## Statement loading
 
+Importing for the first time from the hosted UI? Start with
+[Import your first statement](docs/import-your-first-statement.md): one-time
+clone and Python setup, private database credentials, and the repeat import
+procedure. No local UI setup is needed.
+
 The [statement-loading guide](docs/statement-imports.md) covers owner/card setup,
 atomic imports, duplicate no-ops, review candidates, original retrieval, and
 private PostgreSQL backup/recovery.

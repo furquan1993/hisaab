@@ -52,11 +52,9 @@ it("lists saved cards even without statements and updates the command when switc
 
 it("does not show an incomplete command when no card IDs are available", async () => {
   const { api } = apiResult([]);
-  const { container } = render(
-    <ImportCommands api={api} ownerId={owner} sources={[]} />,
-  );
+  render(<ImportCommands api={api} ownerId={owner} sources={[]} />);
   await screen.findByText(/No saved cards yet/);
-  expect(container.querySelector("code")).toBeNull();
+  expect(screen.queryByText(/uv run python -m core import-pdf/)).toBeNull();
 });
 
 it("loads every page of saved cards", async () => {

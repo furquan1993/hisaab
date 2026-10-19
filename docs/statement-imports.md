@@ -1,5 +1,10 @@
 # Statement loading
 
+For an existing hosted workspace, start with the
+[first-time import guide](import-your-first-statement.md). It explains local
+setup, database credentials, and the commands to run for each new PDF. The
+sections below are the operator and implementation reference.
+
 This milestone adds a trusted single-user CLI backed by the existing five-entity
 schema. No new schema migration is required. The initial schema was deployed
 to Supabase on 2026-10-18; no private statements were uploaded during development.

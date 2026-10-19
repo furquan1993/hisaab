@@ -71,6 +71,50 @@ export default function ImportCommands({
     sources.find((source) => source.id === importId) ?? sources[0];
   return (
     <div className="import-commands">
+      <details>
+        <summary>First time? Set up the local importer</summary>
+        <p>
+          Importing needs Git, uv, repository access, and authorized database
+          credentials. Your browser login does not authenticate the local
+          importer. If you only have a UI account, ask your workspace operator
+          to import for you; database credentials are for trusted operators.
+        </p>
+        <ol>
+          <li>
+            Install Git and uv, then run these once in your terminal:
+            <pre>
+              <code>{`git clone https://github.com/furquan1993/hisaab.git
+cd hisaab
+uv sync --locked`}</code>
+            </pre>
+            Already cloned? Use that folder. uv sets up Python; no local UI,
+            Node.js, or manual virtual-environment activation is needed.
+          </li>
+          <li>
+            Create a private <code>config.local.toml</code> from
+            <code> config.example.toml</code> and fill in the database
+            connection fields from Supabase’s Connect dialog. Use the same
+            project as this workspace. The importer reads this file
+            automatically; <code>--config</code> only selects an alternate file.
+            Keep database passwords out of commands and Git.
+          </li>
+          <li>
+            From the repository root, run
+            <code> uv run python -m core db-check</code> to check connectivity
+            before importing.
+          </li>
+        </ol>
+        <p>
+          <a
+            href="https://github.com/furquan1993/hisaab/blob/main/docs/import-your-first-statement.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Full setup guide, private config example, and troubleshooting
+          </a>
+          . Terminal setup examples use macOS, Linux, or Windows with WSL.
+        </p>
+      </details>
       {selectedCard ? (
         <section className="import-command" aria-label="Import a PDF">
           <h3>Import a PDF</h3>
@@ -90,12 +134,19 @@ export default function ImportCommands({
             </span>
           </label>
           <p>
-            Replace only the PDF path with a file inside the project’s data
-            directory.
+            Copy your original PDF into this clone’s <code>data/</code>
+            directory (create it if needed). Run the command below from the
+            repository root, replacing only the PDF path. Quote paths with
+            spaces. Encrypted PDFs prompt for their password in the terminal.
           </p>
           <pre>
             <code>{`uv run python -m core import-pdf --owner ${ownerId} --card ${selectedCard.id} data/statement.pdf`}</code>
           </pre>
+          <p>
+            After importing, choose Reload imports below and review the saved
+            statement or candidate. Keep your clone and private config for next
+            time; no UI deployment is needed to import more PDFs.
+          </p>
         </section>
       ) : (
         <p>
