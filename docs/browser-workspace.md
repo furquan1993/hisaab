@@ -204,8 +204,9 @@ After merge, hosting approval and backend rollout:
 1. Enable GitHub Pages with **GitHub Actions** as the publishing source.
 2. Set repository Actions **variables** (not privileged secrets):
    `HISAAB_SUPABASE_URL` and `HISAAB_SUPABASE_PUBLISHABLE_KEY`.
-3. Run **Deploy static workspace** manually. It builds, checks public
-   configuration and deploys only `web/dist`, never Python config or data/.
+3. **Deploy static workspace** runs automatically on every push to `main`.
+   It tests, builds, checks public configuration and deploys only `web/dist`,
+   never Python config or data/. Manual runs remain available in Actions.
 4. Use the deployed /hisaab/ URL. Configure the exact site URL in Supabase Auth
    for any future confirmation/reset redirects. Current password sign-in does
    not require an email per login or a custom callback server.

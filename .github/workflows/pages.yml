@@ -1,6 +1,8 @@
 name: Deploy static workspace
-# Manual rollout only, after code/migrations are reviewed and hosting is enabled.
+# Publish main after the frontend tests and build pass.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
