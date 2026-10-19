@@ -113,6 +113,29 @@ The UI retains an uncertain request identifier for a safe retry and prevents a n
 request while that result is uncertain. On reload, inspect receipt history before
 repeating a payment entry. A received server rejection preserves an editable draft.
 
+## Reconciliation query performance
+
+A multi-account production summary exposed repeated evaluation of the nested
+reviewed-evidence views. This could exceed the managed authenticated-role
+8-second statement limit even though migrations and grants were correct.
+
+The prepared `0012_funding_query_plan` migration evaluates owner-scoped obligations,
+applications and confirmations once per query using materialized CTEs, then reuses
+them for the account/month joins. It does not create cached balance tables, alter
+financial calculations or raise database timeouts. Existing RLS and grants remain
+in force; verified-owner filtering also bounds work inside definer operations.
+
+The optimized query passed a read-only test against the live data in approximately
+1.1 seconds, where the old query exceeded 15 seconds. On a password-protected
+restored copy, old and new reconciliation rows and fingerprints matched exactly,
+and the optimized query completed under the real 8-second budget. Regression
+coverage includes several budget accounts, the full managed API list request and
+the query materialization fences. The frontend identifies SQLSTATE 57014 as a query
+timeout instead of incorrectly suggesting a missing upgrade or bad connection.
+
+This performance migration is tested but not yet approved or applied to production.
+The hosted revision remains `0011_contributions` until a separate rollout approval.
+
 ## Verification and rollout
 
 Frontend unit tests and actual isolated Auth/API/browser tests cover exact values,

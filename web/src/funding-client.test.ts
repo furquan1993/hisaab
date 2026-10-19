@@ -1,6 +1,10 @@
 import { expect, it, vi } from "vitest";
 import type { BrowserClient } from "./client";
-import { FundingError, recordContribution } from "./funding-client";
+import {
+  FundingError,
+  readFunding,
+  recordContribution,
+} from "./funding-client";
 const scope = {
   card_id: "card",
   account_id: "account",
@@ -13,6 +17,25 @@ const draft = {
   received_on: "2026-01-01",
   note: "",
 };
+it("reports a read timeout instead of suggesting missing migrations or credentials", async () => {
+  const query = {
+    select: vi.fn().mockReturnThis(),
+    or: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    range: vi.fn().mockReturnThis(),
+    abortSignal: vi
+      .fn()
+      .mockResolvedValue({ data: null, error: { code: "57014" } }),
+  };
+  const api = { from: vi.fn().mockReturnValue(query) };
+  await expect(
+    readFunding(
+      api as unknown as BrowserClient,
+      "2026-01-01",
+      new AbortController().signal,
+    ),
+  ).rejects.toThrow("Reconciliation took too long");
+});
 it("does not treat a returned PostgREST fetch failure as a definite rejection", async () => {
   const api = {
     rpc: vi.fn().mockResolvedValue({

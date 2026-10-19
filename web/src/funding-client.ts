@@ -16,10 +16,19 @@ async function allPages<T>(
   const result: T[] = [];
   for (let offset = 0; ; offset += 100) {
     const { data, error } = await page(offset);
-    if (error)
+    if (error) {
+      if (
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "57014"
+      )
+        throw Error(
+          "Reconciliation took too long to load. Please retry; if it persists, the database query needs attention.",
+        );
       throw Error(
         "Could not load reconciliation. Check the connection and approved database upgrade, then reload.",
       );
+    }
     const items = z.array(schema).parse(data);
     result.push(...items);
     if (items.length < 100) return result;
