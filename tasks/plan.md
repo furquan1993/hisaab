@@ -1,5 +1,7 @@
 # Monthly reconciliation and card-scoped contributions
 
+The approved Spending feature is planned separately in [spending.md](spending.md).
+
 Linear FUR-8 and FUR-14 remain the task/status source. The operator approved implementing the summary and settlement workflow together. This plan supersedes the earlier combined-settlement and all-cards completeness proposals.
 
 ## Contract and boundaries

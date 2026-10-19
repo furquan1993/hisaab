@@ -30,6 +30,7 @@ class ModelContractTests(unittest.TestCase):
                 "hisaab.categories",
                 "hisaab.accounts",
                 "hisaab.entry_decisions",
+                "hisaab.entry_descriptions",
                 "hisaab.decision_events",
                 "hisaab.parser_revisions",
                 "hisaab.entry_links",
@@ -37,6 +38,9 @@ class ModelContractTests(unittest.TestCase):
                 "hisaab.contributions",
                 "hisaab.funding_confirmations",
                 "hisaab.assignment_examples",
+                "hisaab.spending_groups",
+                "hisaab.spending_assignments",
+                "hisaab.spending_events",
             },
         )
         configure_mappers()

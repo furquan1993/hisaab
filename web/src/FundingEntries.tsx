@@ -7,6 +7,8 @@ import type { FundingGroup } from "./funding-domain";
 const rowSchema = z.object({
   id: z.string(),
   effective_description: z.string(),
+  description: z.string().optional(),
+  friendly_description: z.string().nullable().default(null),
   effective_amount: z
     .string()
     .regex(/^\d+\.\d{2}$/)
@@ -79,6 +81,8 @@ export default function FundingEntries({
             return {
               id: r.id,
               effective_description: v.description,
+              description: r.description,
+              friendly_description: r.friendly_description,
               effective_amount: v.amount,
               effective_direction: v.direction,
               effective_entry_type: v.entry_type,
@@ -118,7 +122,12 @@ export default function FundingEntries({
               <li key={r.id}>
                 <div className="funding-entry-info">
                   <span className="funding-entry-description">
-                    {r.effective_description}
+                    {r.friendly_description ?? r.effective_description}
+                    {r.friendly_description && (
+                      <small>
+                        Statement: {r.description ?? r.effective_description}
+                      </small>
+                    )}
                   </span>
                   <span className="funding-entry-meta">
                     {r.effective_transaction_date ? (

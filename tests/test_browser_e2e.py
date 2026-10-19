@@ -38,17 +38,18 @@ class BrowserE2ETests(SupabaseTests):
             session.commit()
         self.run_frontend(("auth-smoke.mjs", "inline-smoke.mjs"))
 
-    def run_frontend(self, scripts):
+    def run_frontend(self, scripts, *, port=5183):
         environment = os.environ.copy()
         environment.update(
             VITE_SUPABASE_URL=self.api,
             VITE_SUPABASE_PUBLISHABLE_KEY=self.anon,
             HISAAB_E2E_EMAIL=self.logins[0][0],
             HISAAB_E2E_PASSWORD=self.logins[0][1],
+            HISAAB_E2E_BASE_URL=f"http://127.0.0.1:{port}/hisaab/",
         )
         with tempfile.TemporaryFile() as log:
             server = subprocess.Popen(
-                ["npm", "run", "dev", "--", "--port", "5183", "--strictPort"],
+                ["npm", "run", "dev", "--", "--port", str(port), "--strictPort"],
                 cwd=ROOT / "web",
                 env=environment,
                 stdout=log,
@@ -60,7 +61,7 @@ class BrowserE2ETests(SupabaseTests):
                         self.fail("Isolated frontend did not start.")
                     try:
                         with urlopen(
-                            "http://127.0.0.1:5183/hisaab/", timeout=1
+                            f"http://127.0.0.1:{port}/hisaab/", timeout=1
                         ) as response:
                             if response.status == 200:
                                 break
@@ -77,7 +78,7 @@ class BrowserE2ETests(SupabaseTests):
                         timeout=60,
                     )
                     self.assertEqual(
-                        result.returncode, 0, "Isolated browser smoke failed: " + script
+                        result.returncode, 0, "Isolated browser smoke failed: " + script + "\n" + result.stderr.decode(errors="replace")[-4000:]
                     )
             finally:
                 server.terminate()

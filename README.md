@@ -70,6 +70,12 @@ The rollout included a verified backup restore and migration rehearsal; original
 financial data was preserved. Future Auth/API migrations require separate reviewed
 rollout approval. Additional real financial loads remain gated.
 
+The new **Spending** page explores categories and independent trips/groups such
+as **Goa trip**, with transaction lists, exact totals and refunds across cards.
+See [Spending usage and rollout](docs/spending.md). Its `0015_spending_groups`
+migration was deployed on 2026-10-19 after a verified backup restore and rehearsal.
+The owner-private app is live at [Hisaab](https://hisaab-spending.fur-ahmed.chatgpt.site).
+
 The **Summary** page distinguishes net spending from each statement's printed
 amount due. The approved balance rollout on 2026-10-19 captured two verified HDFC
 bill headers without changing transactions, assignments or selected sources.

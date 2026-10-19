@@ -10,7 +10,7 @@ from alembic.script import ScriptDirectory
 from alembic.util import CommandError
 from sqlalchemy import inspect, text
 
-from core.persistence.models import Base, Contribution, FundingAccount
+from core.persistence.models import Base, Contribution, FundingAccount, SpendingGroup
 from tests.persistence_fixture import seed
 from tests.postgres_fixture import PostgresTests, migration_config, test_engine
 
@@ -45,7 +45,7 @@ class OfflineMigrationTests(unittest.TestCase):
     def test_single_head_and_no_secret_in_configuration(self):
         config = migration_config()
         self.assertEqual(
-            ScriptDirectory.from_config(config).get_heads(), ["0014_statement_balances"]
+            ScriptDirectory.from_config(config).get_heads(), ["0016_friendly_descriptions"]
         )
         self.assertIsNone(config.get_main_option("sqlalchemy.url"))
 
@@ -75,6 +75,16 @@ class OfflineMigrationTests(unittest.TestCase):
 
 
 class MigrationPostgresTests(PostgresTests):
+    def test_downgrade_refuses_to_discard_spending_groups(self):
+        records = seed(self.session)
+        self.session.add(SpendingGroup(owner_id=records.owner.id, name="Synthetic retained trip"))
+        self.session.flush()
+        before = self.connection.scalar(text("SELECT version_num FROM public.hisaab_schema_version"))
+        with self.assertRaises(CommandError), self.connection.begin_nested():
+            command.downgrade(migration_config(self.connection), "0014_statement_balances")
+        self.assertEqual(self.connection.scalar(text("SELECT version_num FROM public.hisaab_schema_version")), before)
+        self.assertEqual(self.connection.scalar(text("SELECT count(*) FROM hisaab.spending_groups")), 1)
+
     def test_metadata_has_no_drift_after_upgrade(self):
         output = StringIO()
         config = migration_config(self.connection)
@@ -95,7 +105,7 @@ class MigrationPostgresTests(PostgresTests):
             self.connection.scalar(
                 text("SELECT version_num FROM public.hisaab_schema_version")
             ),
-            "0014_statement_balances",
+            "0016_friendly_descriptions",
         )
 
     def test_downgrade_refuses_to_discard_contribution_history(self):
@@ -133,7 +143,7 @@ class MigrationPostgresTests(PostgresTests):
             self.connection.scalar(
                 text("SELECT version_num FROM public.hisaab_schema_version")
             ),
-            "0014_statement_balances",
+            "0016_friendly_descriptions",
         )
         self.assertEqual(
             self.connection.scalar(text("SELECT count(*) FROM hisaab.contributions")), 1

@@ -9,6 +9,11 @@ The original five evidence entities remain intact. New owner-scoped sidecars hol
 
 ## Labels and assignments
 
+Trips and related spending use independent owner-scoped groups and versioned
+membership rather than overloading Categories or funding Accounts. See
+[the Spending model, usage and rollout boundary](../spending.md). Group edits do
+not change financial decisions or train automatic category/account assignments.
+
 * `hisaab_api.labels` lists both kinds, including archived labels.
 * `save_label` creates at expected version zero, or renames/archives/restores an existing label at its exact expected version. Names are unique per owner and kind through the managed mutation API, case-insensitively. Archived names remain reserved.
 * `save_entry_decision` accepts an entry ID, expected decision version, and a patch. Omitted assignment keys retain their current values; explicit null removes an assignment. It derives ownership from verified authentication, checks the selected source, locks the statement and decision, validates same-owner labels, and writes a decision plus audit event atomically.
@@ -30,3 +35,9 @@ Revision APIs and explicit reparse CLI now have isolated PostgreSQL and actual A
 * https://www.postgresql.org/docs/17/sql-createview.html
 * https://www.postgresql.org/docs/17/explicit-locking.html
 * https://postgrest.org/en/stable/references/errors.html
+
+## Friendly descriptions
+
+[Personal transaction descriptions](../friendly-descriptions.md) use independent,
+append-only snapshots and versions. They never change financial decision versions,
+merchant learning or settlement fingerprints. Hosted rollout is pending approval.

@@ -14,6 +14,8 @@ export const entrySchema = z.object({
   statement_date: date,
   transaction_date: date,
   description: z.string(),
+  friendly_description: z.string().nullable().default(null),
+  friendly_description_version: z.number().int().nonnegative().default(0),
   amount: z
     .string()
     .regex(/^\d+\.\d{2}$/)

@@ -13,9 +13,13 @@ import {
 } from "./domain";
 import Reconciliation from "./Reconciliation";
 import Summary from "./Summary";
+import Spending, { type SpendingFocus } from "./Spending";
+import { useSpending } from "./useSpending";
+import EntryTripEditor from "./EntryTripEditor";
 import { assignEntries } from "./auto-assignments";
 import type { Confirmation, Contribution } from "./funding-domain";
 import Evidence from "./Evidence";
+import FriendlyDescriptionEditor from "./FriendlyDescriptionEditor";
 import Labels from "./Labels";
 import { useLabels } from "./useLabels";
 import AssignmentEditor, { type AssignmentPatch } from "./AssignmentEditor";
@@ -50,6 +54,7 @@ export default function Workspace({
     | "category"
     | "imports"
     | "reconciliation"
+    | "spending"
   >("statements");
   const labelStore = useLabels(api, ownerId);
   const [fundingMonth, setFundingMonth] = useState(initialRange[0].slice(0, 7));
@@ -67,6 +72,9 @@ export default function Workspace({
   const [assignmentError, setAssignmentError] = useState("");
   const pendingFocus = useRef<string | null>(null);
   const [editing, setEditing] = useState<Entry | null>(null);
+  const [describing, setDescribing] = useState<Entry | null>(null);
+  const descriptionTrigger = useRef<HTMLButtonElement | null>(null);
+  const [search, setSearch] = useState("");
   const [reviewing, setReviewing] = useState<Entry | null>(null);
   const reviewTrigger = useRef<HTMLButtonElement | null>(null);
   const [notice, setNotice] = useState("");
@@ -87,6 +95,16 @@ export default function Workspace({
   const [error, setError] = useState(""),
     [selected, setSelected] = useState<Entry | null>(null);
   const [refresh, setRefresh] = useState(0);
+  const [spendingFocus, setSpendingFocus] = useState<SpendingFocus>();
+  const [tripEntry, setTripEntry] = useState<Entry | null>(null);
+  const tripTrigger = useRef<HTMLButtonElement | null>(null);
+  const spendingStore = useSpending(
+    api,
+    ownerId,
+    demoRows.current,
+    section === "spending" || !!tripEntry,
+    refresh,
+  );
   const evidenceTrigger = useRef<HTMLButtonElement | null>(null);
   const invalid = !start || !end || start > end;
   useEffect(() => {
@@ -101,7 +119,16 @@ export default function Workspace({
       return;
     }
     const filtered = sortEntries(
-      filterEntries(demoRows.current, view, start, end, dateBasis),
+      filterEntries(demoRows.current, view, start, end, dateBasis).filter(
+        (row) =>
+          [
+            row.description,
+            row.effective_description,
+            row.friendly_description,
+          ].some((value) =>
+            value?.toLowerCase().includes(search.toLowerCase().trim()),
+          ),
+      ),
       dateSort,
     );
     const promise = api
@@ -114,6 +141,7 @@ export default function Workspace({
           controller.signal,
           dateBasis,
           dateSort,
+          search,
         )
       : Promise.resolve({
           rows: filtered.slice(offset, offset + 50),
@@ -140,6 +168,7 @@ export default function Workspace({
                 controller.signal,
                 dateBasis,
                 dateSort,
+                search,
               );
               labelStore.reload();
             }
@@ -178,6 +207,7 @@ export default function Workspace({
     refresh,
     dateBasis,
     dateSort,
+    search,
   ]);
   useEffect(() => {
     if (loading || saving || !pendingFocus.current) return;
@@ -186,6 +216,8 @@ export default function Workspace({
     pendingFocus.current = null;
   }, [loading, rows, saving]);
   function resetDetails() {
+    setTripEntry(null);
+    setDescribing(null);
     setExpandedId(null);
     setSelected(null);
     setEditing(null);
@@ -235,6 +267,8 @@ export default function Workspace({
           is_selected: true,
           source_state: "selected",
           logical_entry_id: old?.logical_entry_id ?? old?.id ?? row.id,
+          friendly_description: old?.friendly_description ?? null,
+          friendly_description_version: old?.friendly_description_version ?? 0,
           category_id: old?.category_id ?? null,
           account_id: old?.account_id ?? null,
           decision_version: old?.decision_version ?? 0,
@@ -274,6 +308,43 @@ export default function Workspace({
         return { ...next, needs_review: requiresReview(next) };
       }),
     );
+  }
+  async function saveDescription(description: string | null) {
+    if (!describing) return;
+    let saved = {
+      friendly_description: description,
+      friendly_description_version: describing.friendly_description_version + 1,
+    };
+    if (api) {
+      const { data, error } = await api.rpc("save_friendly_description", {
+        p_entry_id: describing.id,
+        p_expected_version: describing.friendly_description_version,
+        p_description: description,
+      });
+      if (error)
+        throw Error(
+          error.code === "PT409"
+            ? "The description or source changed. Your draft is kept; close and refresh before saving."
+            : "Could not confirm the save. Reload before retrying.",
+        );
+      saved = data;
+    }
+    const update = (current: Entry[]) =>
+      current.map((row) =>
+        (row.logical_entry_id ?? row.id) ===
+        (describing.logical_entry_id ?? describing.id)
+          ? { ...row, ...saved }
+          : row,
+      );
+    if (!api) demoRows.current = update(demoRows.current);
+    setRows(update);
+    pendingFocus.current = "entry-toggle-" + describing.id;
+    setDescribing(null);
+    setNotice("Description saved.");
+    if (search.trim()) {
+      setLoading(true);
+      setRefresh((n) => n + 1);
+    }
   }
   async function saveReview(save: ReviewSave) {
     if (!reviewing) return;
@@ -449,6 +520,7 @@ export default function Workspace({
         {(
           [
             ["summary", "Summary"],
+            ["spending", "Spending"],
             ["statements", "Statements"],
             ["reconciliation", "Reconciliation"],
             ["account", "Accounts"],
@@ -461,9 +533,10 @@ export default function Workspace({
             key={value}
             className={"nav-item " + (section === value ? "nav-active" : "")}
             aria-current={section === value ? "page" : undefined}
-            disabled={fundingBusy}
+            disabled={fundingBusy || spendingStore.busy}
             onClick={() => {
               setSection(value);
+              if (value === "spending") setSpendingFocus(undefined);
               resetDetails();
             }}
           >
@@ -491,15 +564,17 @@ export default function Workspace({
             <strong>
               {section === "summary"
                 ? "Summary"
-                : section === "statements"
-                  ? "Statements"
-                  : section === "reconciliation"
-                    ? "Reconciliation"
-                    : section === "account"
-                      ? "Accounts"
-                      : section === "imports"
-                        ? "Imports"
-                        : "Categories"}
+                : section === "spending"
+                  ? "Spending"
+                  : section === "statements"
+                    ? "Statements"
+                    : section === "reconciliation"
+                      ? "Reconciliation"
+                      : section === "account"
+                        ? "Accounts"
+                        : section === "imports"
+                          ? "Imports"
+                          : "Categories"}
             </strong>
           </span>
           <button className="quiet" onClick={onExit}>
@@ -534,6 +609,24 @@ export default function Workspace({
             }}
             onImports={() => setSection("imports")}
             onReconciliation={() => setSection("reconciliation")}
+            onSpending={(id, period, currency) => {
+              setSpendingFocus({
+                view: "category",
+                id: id === "unassigned" ? "uncategorized" : id,
+                period,
+                currency,
+              });
+              setSection("spending");
+              resetDetails();
+            }}
+          />
+        ) : section === "spending" ? (
+          <Spending
+            store={spendingStore}
+            labels={labelStore.labels}
+            demo={!api}
+            initialFocus={spendingFocus}
+            onCategories={() => setSection("category")}
           />
         ) : section === "imports" ? (
           <Imports
@@ -692,6 +785,22 @@ export default function Workspace({
                     </button>
                   </div>
                 )}
+                <div className="date-range description-search">
+                  <label>
+                    Search descriptions
+                    <input
+                      type="search"
+                      maxLength={500}
+                      value={search}
+                      disabled={saving}
+                      onChange={(event) => {
+                        setSearch(event.target.value);
+                        setOffset(0);
+                        resetDetails();
+                      }}
+                    />
+                  </label>
+                </div>
                 <div className="date-range">
                   <label>
                     Sort by transaction date
@@ -832,12 +941,26 @@ export default function Workspace({
                                     className="entry-description"
                                     title={effective.description ?? undefined}
                                   >
-                                    {effective.description}
+                                    {row.friendly_description ??
+                                      effective.description}
                                   </strong>
-                                  {effective.description !==
-                                    row.description && (
-                                    <small>Extracted: {row.description}</small>
+                                  {row.friendly_description && (
+                                    <small>Statement: {row.description}</small>
                                   )}
+                                  {row.friendly_description &&
+                                    effective.description !==
+                                      row.description && (
+                                      <small>
+                                        Reviewed: {effective.description}
+                                      </small>
+                                    )}
+                                  {!row.friendly_description &&
+                                    effective.description !==
+                                      row.description && (
+                                      <small>
+                                        Extracted: {row.description}
+                                      </small>
+                                    )}
                                   <small>
                                     {row.needs_review
                                       ? "● Needs review"
@@ -915,6 +1038,46 @@ export default function Workspace({
                                   >
                                     <button
                                       type="button"
+                                      aria-label="Assign trip or group"
+                                      aria-pressed={tripEntry?.id === row.id}
+                                      disabled={
+                                        saving ||
+                                        spendingStore.busy ||
+                                        !row.is_selected ||
+                                        effective.entry_type === "payment"
+                                      }
+                                      onClick={(event) => {
+                                        tripTrigger.current =
+                                          event.currentTarget;
+                                        setEditing(null);
+                                        setReviewing(null);
+                                        setSelected(null);
+                                        setNotice("");
+                                        setDescribing(null);
+                                        setTripEntry({ ...row });
+                                      }}
+                                    >
+                                      Trip / group
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={saving || !row.is_selected}
+                                      aria-pressed={describing?.id === row.id}
+                                      onClick={(event) => {
+                                        descriptionTrigger.current =
+                                          event.currentTarget;
+                                        setEditing(null);
+                                        setTripEntry(null);
+                                        setReviewing(null);
+                                        setSelected(null);
+                                        setNotice("");
+                                        setDescribing({ ...row });
+                                      }}
+                                    >
+                                      Edit description
+                                    </button>
+                                    <button
+                                      type="button"
                                       className="evidence-link"
                                       aria-label="View evidence"
                                       aria-pressed={selected?.id === row.id}
@@ -922,7 +1085,9 @@ export default function Workspace({
                                       onClick={(event) => {
                                         evidenceTrigger.current =
                                           event.currentTarget;
+                                        setDescribing(null);
                                         setEditing(null);
+                                        setTripEntry(null);
                                         setReviewing(null);
                                         setNotice("");
                                         setSelected({ ...row });
@@ -943,6 +1108,7 @@ export default function Workspace({
                                       onClick={(event) => {
                                         editTrigger.current =
                                           event.currentTarget;
+                                        setDescribing(null);
                                         setReviewing(null);
                                         setSelected(null);
                                         setNotice("");
@@ -965,6 +1131,7 @@ export default function Workspace({
                                       onClick={(event) => {
                                         reviewTrigger.current =
                                           event.currentTarget;
+                                        setDescribing(null);
                                         setEditing(null);
                                         setSelected(null);
                                         setNotice("");
@@ -979,6 +1146,45 @@ export default function Workspace({
                                       {notice}
                                     </p>
                                   )}
+                                  {tripEntry?.id === row.id && (
+                                    <EntryTripEditor
+                                      key={tripEntry.id}
+                                      entry={tripEntry}
+                                      store={spendingStore}
+                                      onClose={() => {
+                                        setTripEntry(null);
+                                        tripTrigger.current?.focus({
+                                          preventScroll: true,
+                                        });
+                                      }}
+                                      onSaved={() => {
+                                        setTripEntry(null);
+                                        setNotice(
+                                          "Trip assignment saved. Account and category are unchanged.",
+                                        );
+                                        tripTrigger.current?.focus({
+                                          preventScroll: true,
+                                        });
+                                      }}
+                                    />
+                                  )}
+                                  {describing?.id === row.id && (
+                                    <FriendlyDescriptionEditor
+                                      key={describing.id}
+                                      row={describing}
+                                      onSave={(description) =>
+                                        saveEntry(() =>
+                                          saveDescription(description),
+                                        )
+                                      }
+                                      onClose={() => {
+                                        setDescribing(null);
+                                        descriptionTrigger.current?.focus({
+                                          preventScroll: true,
+                                        });
+                                      }}
+                                    />
+                                  )}
                                   {reviewing?.id === row.id && (
                                     <ReviewEditor
                                       key={reviewing.id}
@@ -987,6 +1193,7 @@ export default function Workspace({
                                         saveEntry(() => saveReview(save))
                                       }
                                       onClose={() => {
+                                        setDescribing(null);
                                         setReviewing(null);
                                         reviewTrigger.current?.focus({
                                           preventScroll: true,
@@ -1003,6 +1210,7 @@ export default function Workspace({
                                         saveEntry(() => saveAssignments(patch))
                                       }
                                       onClose={() => {
+                                        setDescribing(null);
                                         setEditing(null);
                                         editTrigger.current?.focus({
                                           preventScroll: true,
