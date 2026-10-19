@@ -272,3 +272,10 @@ native recovery and parser/persistence regressions. CI runs both jobs separately
 - https://vite.dev/guide/env-and-mode
 - https://vite.dev/guide/static-deploy
 - https://docs.github.com/en/pages/getting-started-with-github-pages/about-github-pages
+
+## Friendly transaction descriptions
+
+The separately approved `0016_friendly_descriptions` rollout completed on 2026-10-19
+after a fresh private backup and verified restore rehearsal. Friendly descriptions
+use independent versions and preserve financial decisions and settlement checks.
+See [usage and verification](friendly-descriptions.md).

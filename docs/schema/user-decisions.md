@@ -32,3 +32,9 @@ Revision APIs and explicit reparse CLI now have isolated PostgreSQL and actual A
 * https://www.postgresql.org/docs/17/sql-createview.html
 * https://www.postgresql.org/docs/17/explicit-locking.html
 * https://postgrest.org/en/stable/references/errors.html
+
+## Friendly descriptions
+
+[Personal transaction descriptions](../friendly-descriptions.md) use independent,
+append-only snapshots and versions. They never change financial decision versions,
+merchant learning or settlement fingerprints.
