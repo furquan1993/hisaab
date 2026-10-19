@@ -1,5 +1,7 @@
 // Actual local Auth/API with synthetic records, desktop and mobile.
 import { chromium, expect } from "@playwright/test";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 const browser = await chromium.launch();
 try {
   for (const viewport of [
@@ -37,7 +39,7 @@ try {
       page.getByText(`Statement: ${original}`, { exact: true }),
     ).toBeVisible();
     await page.screenshot({
-      path: `/private/tmp/hisaab-friendly-${viewport.width}.png`,
+      path: join(tmpdir(), `hisaab-friendly-${viewport.width}.png`),
       fullPage: true,
     });
     await page.reload();
