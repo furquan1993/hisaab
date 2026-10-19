@@ -7,6 +7,17 @@ sections below are the operator and implementation reference. Ordinary
 `import-pdf` commands now sign in with the UI account and call authenticated
 APIs; only an explicit `--config` selects direct database imports.
 
+The approved hosted rollout of `0020_authenticated_imports` completed on
+2026-10-19 from `0019_transaction_contributions`. A fresh checksummed app-schema
+backup was restored into a password-protected disposable PostgreSQL instance,
+verified against all original rows and PDF bytes, and used to rehearse the exact
+migration. The live migration committed transactionally. Role-scoped import,
+duplicate, candidate, encrypted-original, malformed-rollback and owner-isolation
+checks passed with all synthetic writes rolled back. Existing data, views,
+permissions and RLS were preserved, and the managed API loaded both new endpoints
+and denied anonymous calls. Private recovery evidence is Git-ignored at
+`data/migration-rollout/authenticated-imports-verified-backup.json`.
+
 This milestone adds a trusted single-user CLI backed by the existing five-entity
 schema. No new schema migration is required. The initial schema was deployed
 to Supabase on 2026-10-18; no private statements were uploaded during development.

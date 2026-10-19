@@ -9,9 +9,13 @@ Authenticated import redesign:
       full Python/PostgreSQL/Auth suite passed (347 tests, 16 opt-in skips).
       A stale disposable reconciliation view was restored to committed 0016 SQL
       before the passing run; no unrelated source change was needed.
-- [x] Implementation prepared for main; hosted migration activation is separate:
-      `0020_authenticated_imports` has been tested locally but not applied to the
-      live database. Follow the existing explicit-approval backup/rehearsal rollout.
+- [x] Implementation committed to main as `df9e865`; all GitHub workflows passed.
+- [x] Separately authorized hosted rollout completed on 2026-10-19 from `0019`
+      to `0020_authenticated_imports` after fresh backup, exact restore and
+      rehearsal. Live role-scoped smoke checks rolled back all synthetic writes;
+      data/PDF/view fingerprints and RLS/grants were preserved. Managed API
+      endpoint discovery and anonymous denial passed. Private recovery evidence:
+      `data/migration-rollout/authenticated-imports-verified-backup.json`.
 
 Current Spending implementation: [spending.md](spending.md).
 

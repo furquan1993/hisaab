@@ -32,10 +32,11 @@ The project URL and public publishable key are included in
 identify the project and application; your sign-in authorizes access to your
 profile. A publishable key alone cannot import data.
 
-The operator must deploy migration `0020_authenticated_imports` once before this
-flow can work on a hosted database. It adds the authenticated import API without
-requiring a Python service. If you see `import_api_unavailable`, contact the
-workspace operator; do not attempt a migration using your login or public key.
+The default hosted workspace has migration `0020_authenticated_imports` applied
+as of 2026-10-19, so email/password imports are enabled. Operators of another
+database must deploy that migration once to add the authenticated import API.
+If you see `import_api_unavailable`, contact the workspace operator; do not
+attempt a migration using your login or public key.
 
 ## Each time you import
 
