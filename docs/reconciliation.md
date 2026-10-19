@@ -1,9 +1,14 @@
 # Monthly reconciliation and contributions
 
-This implements Linear FUR-8 and FUR-14. The new database revisions are
-`0010_funding_totals` and `0011_contributions`. They are not permission to upgrade
-the hosted database. Production remains at its separately approved revision until
-a reviewed backup, recovery check and explicit rollout decision.
+This implements Linear FUR-8 and FUR-14. The operator separately approved the
+hosted rollout of `0010_funding_totals` and `0011_contributions`; production is now
+at `0011_contributions`. A protected backup, exact isolated restore, migration and
+funding-flow rehearsal preceded the transactional live upgrade. Metadata, preserved
+original data/PDF bytes, role-scoped funding operations, RLS/grants and managed API
+anonymous denial were verified afterward. Rollback-only probes retained no synthetic
+records. See [the rollout record](browser-workspace.md#operator-rollout-only-after-review-and-explicit-approval)
+for private backup/audit locations. Future migrations still require explicit approval.
+Public frontend hosting is separate and remains blocked by the repository plan.
 
 ## Using the workspace
 

@@ -63,8 +63,9 @@ data path; no custom app server or privileged browser credentials.
 Start with `cd web`, `npm ci`, then `npm run dev`. Open
 http://127.0.0.1:5173/hisaab/ and choose **Explore synthetic demo**.
 See [setup, security, deployment and verification](docs/browser-workspace.md).
-The approved hosted rollout is complete through `0009_reasoned_review`, enabling
-Account/Category management, assignments, reasoned review and source revisions.
+The approved hosted database rollout is complete through `0011_contributions`,
+enabling Account/Category management, assignments, reasoned review, source revisions,
+monthly reconciliation and per-card contributions.
 The rollout included a verified backup restore and migration rehearsal; original
 financial data was preserved. Future Auth/API migrations require separate reviewed
 rollout approval. Additional real financial loads remain gated.
@@ -73,9 +74,10 @@ The monthly **Reconciliation** workspace now adds combined budget-account summar
 with separate currencies and per-card full/partial contributions. Arrears retain
 their original statement month; receipts persist and corrections require explicit
 balance review. Summary totals are derived from existing evidence, not copied
-monthly charges. This new increment requires separately approved migrations
-`0010_funding_totals` and `0011_contributions`, which have not been applied to the
-hosted project. See [reconciliation and contributions](docs/reconciliation.md).
+monthly charges. Migrations `0010_funding_totals` and `0011_contributions` have been
+applied to the hosted database after explicit approval, verified backup/restore,
+rehearsal and rollback-only live checks. Public frontend hosting remains a separate
+blocked rollout. See [reconciliation and contributions](docs/reconciliation.md).
 
 ## Private database connection
 

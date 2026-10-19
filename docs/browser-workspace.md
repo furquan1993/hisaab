@@ -3,9 +3,9 @@
 React 19.3.1, TypeScript 7.0.2 and Vite 8.3.4 serve static assets only.
 Supabase JS 2.118.0 handles managed email/password Auth and the managed Data API.
 There is no custom data server, SSR, browser parser or money transfer. The initial hosted release was read-only. The approved hosted database
-rollout is now complete through `0009_reasoned_review`, supporting independent
+rollout is now complete through `0011_contributions`, supporting independent
 Account/Category management, versioned assignments, reasoned entry and statement
-review, and explicit parser-revision comparison. Future database changes still
+review, explicit parser-revision comparison, monthly summaries and per-card contributions. Future database changes still
 require a separately reviewed and approved rollout.
 
 ## Try the synthetic demo now
@@ -41,10 +41,10 @@ original-month arrears, receipt history and reasoned reconfirmation after correc
 No all-cards readiness gate is imposed. Summary/card/entry drill-downs and contribution
 panels are inline. See [financial rules, data models and API contracts](reconciliation.md).
 
-This increment needs `0010_funding_totals` and `0011_contributions`. Those revisions
-are implemented and tested separately from the approved hosted target
-`0009_reasoned_review`; they have not been deployed. Do not treat implementation,
-a green test suite or a frontend rebuild as hosted migration approval.
+Revisions `0010_funding_totals` and `0011_contributions` were separately approved
+and deployed after the protected recovery/rehearsal checks below. Do not treat
+implementation, a green test suite or a frontend rebuild as approval for future
+hosted migrations. Public Pages hosting remains blocked by the repository plan.
 
 ## Public browser configuration
 
@@ -88,6 +88,22 @@ The private backup is `data/exports/run-csps1pet/database.dump`; its adjacent
 `manifest.json` records its checksum and source revision. The private verification
 record is `data/migration-rollout/verified-backup.json`. The archive is not encrypted
 and does not contain Supabase Auth; the backup boundary below still applies.
+
+The subsequent, separately approved funding rollout upgraded the database from
+`0009_reasoned_review` to `0011_contributions`. A fresh backup was checksummed and
+restored into a password-protected isolated PostgreSQL database. All existing
+application rows, labels, review history and PDF bytes matched. Both migrations,
+metadata/grant checks and rollback-only partial/full contribution, original-month
+allocation and correction/reconfirmation checks passed on that copy before the
+transactional live upgrade. The same role-scoped checks passed in production and
+retained no synthetic records. All earlier rows remained unchanged. The managed
+Data API loaded the new views/RPC and denied anonymous access.
+
+The funding pre-rollout backup is `data/exports/run-qfi0uir5/database.dump`;
+`data/exports/run-l791hmo5/database.dump` is the checksummed post-rollout backup.
+Each has an adjacent revision/checksum manifest. The private audit record is
+`data/migration-rollout/funding-verified-backup.json`. These are local, owner-only,
+unencrypted app-schema backups, not Auth backups or off-device recovery copies.
 
 Preserve the approved target for future deployments. Back up, restore-check and
 obtain explicit rollout approval after code review for future migrations; a

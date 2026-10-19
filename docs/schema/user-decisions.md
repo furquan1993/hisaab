@@ -1,6 +1,7 @@
 # User decisions alongside immutable evidence
 
-Implementation in progress. These changes are not deployed to the hosted project.
+The approved hosted database rollout is complete through `0011_contributions`.
+Future migrations require separate review and rollout approval.
 
 The original five evidence entities remain intact. New owner-scoped sidecars hold Categories, funding Accounts, current entry decisions and append-only decision events. Accounts are budget/funding pots, never aliases for credit cards. The two label kinds are independently managed and assigned.
 
@@ -19,7 +20,7 @@ All new tables retain owner RLS. API views are security invoker; mutation functi
 
 Current decisions reference immutable logical entry roots with restrictive foreign keys. Ordinary duplicate imports still do not reparse or replace records. Explicit reparsing creates new immutable evidence rows and a pending comparison, borrowing the retained original through a same-owner/card/bill/fingerprint reference rather than copying PDF bytes. Full-provenance matches are automatic only when unique on both sides and at the same sequence position. Everything else requires explicit identity or new-entry decisions and acknowledgement of removed rows. Acceptance checks the published source and complete evidence hashes, inserts immutable lineage bindings, and changes the selected source atomically. Earlier evidence and decisions remain present. Source evidence IDs may change; the separately exposed logical entry ID and decision record identity are preserved.
 
-Revision APIs and explicit reparse CLI now have isolated PostgreSQL and actual Auth/API coverage. The source-comparison UI now supports explicit identity/removal review, acceptance/rejection and inspection of retained extraction history. Reasoned corrections and independent statement coverage/date reviews are now implemented. Original fields remain unchanged, supported issues resolve against reviewed values, stale source-bound corrections stay preserved but unapplied, and statement review snapshots are append-only. The browser offers explicit original/reviewed date filtering. Funding totals and contribution settlement are implemented in the next increment through derived views and minimal receipt/confirmation sidecars. Revisions `0010_funding_totals` and `0011_contributions` require separate hosted rollout approval. See [the reconciliation contract](../reconciliation.md). Label assignments alone never imply that contributions have been received.
+Revision APIs and explicit reparse CLI now have isolated PostgreSQL and actual Auth/API coverage. The source-comparison UI now supports explicit identity/removal review, acceptance/rejection and inspection of retained extraction history. Reasoned corrections and independent statement coverage/date reviews are now implemented. Original fields remain unchanged, supported issues resolve against reviewed values, stale source-bound corrections stay preserved but unapplied, and statement review snapshots are append-only. The browser offers explicit original/reviewed date filtering. Funding totals and contribution settlement use derived views and minimal receipt/confirmation sidecars. Revisions `0010_funding_totals` and `0011_contributions` were separately approved and deployed after verified recovery and funding-flow rehearsal. See [the reconciliation contract](../reconciliation.md). Label assignments alone never imply that contributions have been received.
 
 ## References
 

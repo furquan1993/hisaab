@@ -9,4 +9,6 @@ Live feature status belongs to Linear FUR-8 and FUR-14. This is the execution ch
 - [x] Verify synthetic demo and authenticated desktop/mobile browser flows.
 - [x] Run full suites, formatting, build and metadata checks.
 - [x] Update usage/schema documentation and Linear with verification evidence.
-- [ ] Request separate approval for hosted migration rollout. Hosting remains blocked by the current private-repository Pages plan.
+- [x] Obtain separate approval and complete the protected hosted rollout through `0011_contributions`, including restore/rehearsal, exact metadata/data checks, rollback-only live funding verification and managed API anonymous denial.
+
+Public frontend hosting remains blocked by the current private-repository Pages plan; the database rollout does not resolve that separate gate.
