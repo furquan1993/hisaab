@@ -27,7 +27,7 @@ class ArgumentParser(argparse.ArgumentParser):
 
 def _arguments(argv):
     parser = ArgumentParser(
-        description="Parse supported statements locally or import originals into the configured SQL database.",
+        description="Parse statements locally or sign in with your Hisaab UI account to import PDFs.",
         allow_abbrev=False,
     )
     subparsers = parser.add_subparsers(dest="command", required=True)

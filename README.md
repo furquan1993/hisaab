@@ -37,8 +37,9 @@ See the [common contract and HDFC guide](docs/hdfc-parser.md) and [SBI/YES Bank 
 
 Importing for the first time from the hosted UI? Start with
 [Import your first statement](docs/import-your-first-statement.md): one-time
-clone and Python setup, private database credentials, and the repeat import
-procedure. No local UI setup is needed.
+clone and Python setup, sign-in with your UI email/password, and the repeat
+import procedure. Public project settings are included in `supabase.public.json`;
+no database credentials or local UI setup are needed for authenticated imports.
 
 The [statement-loading guide](docs/statement-imports.md) covers owner/card setup,
 atomic imports, duplicate no-ops, review candidates, original retrieval, and
@@ -51,8 +52,11 @@ uv run python -m core import-pdf --owner OWNER_UUID --card CARD_UUID data/statem
 uv run python -m core imports-list --owner OWNER_UUID
 ```
 
-Use returned UUIDs and the correct physical card. Importing writes to the
-configured database; parsing alone does not. Originals are stored unchanged,
+Owner/card creation and `imports-list` above are legacy operator commands using
+private database configuration; UI users can add cards in the hosted workspace.
+`import-pdf` prompts for your UI email/password by default and writes through
+authenticated APIs; `--config config.local.toml` explicitly selects legacy direct
+database imports. Parsing alone does not save data. Originals are stored unchanged,
 including PDF encryption, never reconstructed from extracted pages. No real
 statements were loaded during implementation. Review/merge this feature and
 establish a backup before the first controlled hosted load.

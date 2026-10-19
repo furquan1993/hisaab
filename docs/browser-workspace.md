@@ -56,7 +56,10 @@ hosted migrations. Public Pages hosting remains blocked by the repository plan.
 
 ## Public browser configuration
 
-Copy `web/.env.example` to `web/.env.local`, then fill:
+The UI and user-authenticated Python imports share the committed public project
+settings in `supabase.public.json`. No local frontend environment file is needed
+for that default project. To target a different project, copy `web/.env.example`
+to `web/.env.local` and override both values:
 
 ```dotenv
 VITE_SUPABASE_URL=https://PROJECT.supabase.co
@@ -202,7 +205,8 @@ source/privacy review. The static demo remains usable locally in the meantime.
 After merge, hosting approval and backend rollout:
 
 1. Enable GitHub Pages with **GitHub Actions** as the publishing source.
-2. Set repository Actions **variables** (not privileged secrets):
+2. Optionally override the committed public project settings using repository
+   Actions **variables** (not privileged secrets):
    `HISAAB_SUPABASE_URL` and `HISAAB_SUPABASE_PUBLISHABLE_KEY`.
 3. **Deploy static workspace** runs automatically on every push to `main`.
    It tests, builds, checks public configuration and deploys only `web/dist`,

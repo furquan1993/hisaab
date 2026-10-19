@@ -8,6 +8,7 @@ from uuid import UUID
 
 from core.backup import backup_database
 from core.config import DEFAULT_CONFIG, ConfigurationError, load_config
+from core.user_api import PUBLIC_CONFIG
 from core.database import DatabaseError, create_database_engine
 from core.extraction import ParseError
 from core.imports import import_pdf
@@ -50,11 +51,17 @@ def add_arguments(subparsers):
     card.add_argument("--last-four")
     cards = command("cards-list", "List the selected owner's cards.")
     cards.add_argument("--owner", type=UUID, required=True)
-    imported = command(
-        "import-pdf", "Import original PDFs from the private data directory."
+    imported = subparsers.add_parser(
+        "import-pdf", help="Sign in with your UI email/password and import local PDFs.",
+        allow_abbrev=False,
     )
-    imported.add_argument("--owner", type=UUID, required=True)
-    imported.add_argument("--card", type=UUID, required=True)
+    imported.add_argument("--project-config", type=Path, default=PUBLIC_CONFIG,
+                          help="Public Supabase URL/key JSON (default: supabase.public.json).")
+    imported.add_argument("--email", help="UI email; prompts if omitted. Password is always hidden input.")
+    imported.add_argument("--config", type=Path,
+                          help="Operator-only direct database mode using private TOML; requires --owner and --card.")
+    imported.add_argument("--owner", type=UUID, help="Optional expected UI profile ID; never an authentication credential.")
+    imported.add_argument("--card", type=UUID, help="Saved card ID; prompts with your cards if omitted.")
     imported.add_argument("paths", nargs="+", type=Path)
     reparsed = command(
         "reparse-import",
@@ -252,6 +259,12 @@ HANDLERS = {
 
 def run(args, emit):
     def action():
+        if args.command == "import-pdf":
+            if args.config is None:
+                from core import user_imports
+                return user_imports.run(args, emit, _guard, _password)
+            if args.owner is None or args.card is None or args.email is not None:
+                raise StoreError("operator_arguments", "Direct database mode requires --config, --owner and --card, without --email. Omit --config to use your UI login.")
         if args.command == "assignment-train" and not args.apply:
             return _train(None, args, emit)
         engine = create_database_engine(load_config(args.config))

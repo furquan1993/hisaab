@@ -74,10 +74,9 @@ export default function ImportCommands({
       <details>
         <summary>First time? Set up the local importer</summary>
         <p>
-          Importing needs Git, uv, repository access, and authorized database
-          credentials. Your browser login does not authenticate the local
-          importer. If you only have a UI account, ask your workspace operator
-          to import for you; database credentials are for trusted operators.
+          Importing needs Git, uv, repository access, and the same email and
+          password you use to sign in here. The CLI signs in separately and
+          keeps its session in memory. No database password is needed.
         </p>
         <ol>
           <li>
@@ -91,17 +90,15 @@ uv sync --locked`}</code>
             Node.js, or manual virtual-environment activation is needed.
           </li>
           <li>
-            Create a private <code>config.local.toml</code> from
-            <code> config.example.toml</code> and fill in the database
-            connection fields from Supabase’s Connect dialog. Use the same
-            project as this workspace. The importer reads this file
-            automatically; <code>--config</code> only selects an alternate file.
-            Keep database passwords out of commands and Git.
+            The public project URL and publishable key are included in
+            <code> supabase.public.json</code>, shared with this UI. You do not
+            need to create a private configuration file for imports.
           </li>
           <li>
-            From the repository root, run
-            <code> uv run python -m core db-check</code> to check connectivity
-            before importing.
+            Add your card in Cards, copy the PDF into the clone’s
+            <code> data/</code> folder, then run the import command below from
+            the repository root. Enter your UI email and password when asked. If
+            the PDF is encrypted, enter its separate PDF password next.
           </li>
         </ol>
         <p>
@@ -110,7 +107,7 @@ uv sync --locked`}</code>
             target="_blank"
             rel="noreferrer"
           >
-            Full setup guide, private config example, and troubleshooting
+            Full setup guide and troubleshooting
           </a>
           . Terminal setup examples use macOS, Linux, or Windows with WSL.
         </p>
@@ -144,8 +141,9 @@ uv sync --locked`}</code>
           </pre>
           <p>
             After importing, choose Reload imports below and review the saved
-            statement or candidate. Keep your clone and private config for next
-            time; no UI deployment is needed to import more PDFs.
+            statement or candidate. Passwords and session tokens are not saved.
+            Keep your clone for next time; no UI deployment is needed to import
+            more PDFs.
           </p>
         </section>
       ) : (
@@ -172,7 +170,11 @@ uv sync --locked`}</code>
               </select>
             </span>
           </label>
-          <p>Run the parser again using the saved original PDF.</p>
+          <p>
+            Operator-only: run the parser again using the saved original PDF.
+            This command still requires private database configuration; the
+            email/password import flow above is for new PDF files.
+          </p>
           <pre>
             <code>{`uv run python -m core reparse-import --owner ${ownerId} --import-id ${selectedSource.id}`}</code>
           </pre>

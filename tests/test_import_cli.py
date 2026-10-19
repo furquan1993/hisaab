@@ -36,6 +36,8 @@ class ImportCliTests(ImportTestsBase):
     def load_args(self, *paths):
         return (
             "import-pdf",
+            "--config",
+            "config.local.toml",
             "--owner",
             str(self.owner),
             "--card",

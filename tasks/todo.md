@@ -1,5 +1,18 @@
 # Implementation checkpoints
 
+Authenticated import redesign:
+- [x] Atomic authenticated import RPC and duplicate preflight; real Auth/API
+      tests cover isolation, malformed rollback, encrypted bytes and concurrent retries.
+- [x] Public project config and CLI email/password login; in-memory sessions,
+      refresh, local logout, redacted failures and legacy operator compatibility.
+- [x] UI commands and onboarding docs; 93 frontend tests, build and formatting;
+      full Python/PostgreSQL/Auth suite passed (347 tests, 16 opt-in skips).
+      A stale disposable reconciliation view was restored to committed 0016 SQL
+      before the passing run; no unrelated source change was needed.
+- [x] Implementation prepared for main; hosted migration activation is separate:
+      `0020_authenticated_imports` has been tested locally but not applied to the
+      live database. Follow the existing explicit-approval backup/rehearsal rollout.
+
 Current Spending implementation: [spending.md](spending.md).
 
 Live feature status belongs to Linear FUR-8 and FUR-14. This is the execution checklist for the approved combined implementation.

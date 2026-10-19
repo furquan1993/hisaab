@@ -8,9 +8,12 @@ import {
 } from "./domain";
 
 import { validatePublicConfig } from "./public-config";
+import publicProject from "../../supabase.public.json";
 export { validatePublicConfig } from "./public-config";
-const url = import.meta.env.VITE_SUPABASE_URL ?? "";
-const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
+const url = import.meta.env.VITE_SUPABASE_URL || publicProject.url;
+const key =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  publicProject.publishable_key;
 export const storageKey = `hisaab.auth.${validatePublicConfig(url, key) ? new URL(url).hostname : "unconfigured"}`;
 // A tab-scoped session survives reload without caching financial rows.
 // https://supabase.com/docs/reference/javascript/initializing

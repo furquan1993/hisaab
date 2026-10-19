@@ -1,5 +1,33 @@
 # Monthly reconciliation and card-scoped contributions
 
+## Authenticated local PDF imports (2026-10-19)
+
+User-approved scope: local Python parsing; prompt for the same email/password as
+the hosted UI; commit the public Supabase URL/key; use authenticated Data API
+calls for imports; keep migration credentials private. No Python server.
+
+Implementation order:
+1. Add an atomic `import_statement` RPC and duplicate preflight. Derive owner
+   exclusively from JWT claims, lock the card, verify original byte digest,
+   validate the extraction contract, preserve candidates and immutable originals.
+   Verify actual Auth/API calls, owner isolation, rollback, duplicates and races.
+2. Add an in-memory CLI Auth client and user-facing `import-pdf` default using
+   committed public project configuration. Prompt once per invocation; refresh
+   session for long batches; never print/store credentials or tokens. Keep
+   explicit `--config` as the operator-only direct-database path for compatibility.
+   Verify login, expiry, transport failures, PDF passwords and batch exits.
+3. Update UI-generated commands and the beginner guide; preserve email login,
+   existing parser tests, private migration configuration and JSON CLI output.
+   Verify full frontend/Python suites and isolated real Auth/API import flow.
+
+Sources: https://supabase.com/docs/guides/database/functions,
+https://supabase.com/docs/guides/auth,
+https://www.postgresql.org/docs/17/functions-binarystring.html.
+The server validates facts and provenance structurally; it cannot independently
+re-parse an encrypted PDF. Extraction remains explicitly client-provided evidence.
+Hosted schema rollout follows the existing backup/rehearsal procedure and remains
+separate from static frontend deployment.
+
 The approved Spending feature is planned separately in [spending.md](spending.md).
 
 Linear FUR-8 and FUR-14 remain the task/status source. The operator approved implementing the summary and settlement workflow together. This plan supersedes the earlier combined-settlement and all-cards completeness proposals.

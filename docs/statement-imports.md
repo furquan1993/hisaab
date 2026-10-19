@@ -3,7 +3,9 @@
 For an existing hosted workspace, start with the
 [first-time import guide](import-your-first-statement.md). It explains local
 setup, database credentials, and the commands to run for each new PDF. The
-sections below are the operator and implementation reference.
+sections below are the operator and implementation reference. Ordinary
+`import-pdf` commands now sign in with the UI account and call authenticated
+APIs; only an explicit `--config` selects direct database imports.
 
 This milestone adds a trusted single-user CLI backed by the existing five-entity
 schema. No new schema migration is required. The initial schema was deployed
@@ -32,7 +34,7 @@ uv run python -m core owner-create "Primary"
 uv run python -m core owners-list
 uv run python -m core card-create --owner OWNER_UUID --bank hdfc --label "Regalia"
 uv run python -m core cards-list --owner OWNER_UUID
-uv run python -m core import-pdf --owner OWNER_UUID --card CARD_UUID data/statement.pdf
+uv run python -m core import-pdf --config config.local.toml --owner OWNER_UUID --card CARD_UUID data/statement.pdf
 uv run python -m core imports-list --owner OWNER_UUID --card CARD_UUID
 ```
 

@@ -45,7 +45,7 @@ class OfflineMigrationTests(unittest.TestCase):
     def test_single_head_and_no_secret_in_configuration(self):
         config = migration_config()
         self.assertEqual(
-            ScriptDirectory.from_config(config).get_heads(), ["0019_transaction_contributions"]
+            ScriptDirectory.from_config(config).get_heads(), ["0020_authenticated_imports"]
         )
         self.assertIsNone(config.get_main_option("sqlalchemy.url"))
 
@@ -91,7 +91,7 @@ class MigrationPostgresTests(PostgresTests):
         self.session.flush()
         with self.assertRaises(CommandError), self.connection.begin_nested():
             command.downgrade(migration_config(self.connection), "0018_card_management")
-        self.assertEqual(self.connection.scalar(text("SELECT version_num FROM public.hisaab_schema_version")), "0019_transaction_contributions")
+        self.assertEqual(self.connection.scalar(text("SELECT version_num FROM public.hisaab_schema_version")), "0020_authenticated_imports")
 
     def test_downgrade_refuses_to_discard_spending_groups(self):
         records = seed(self.session)
@@ -123,7 +123,7 @@ class MigrationPostgresTests(PostgresTests):
             self.connection.scalar(
                 text("SELECT version_num FROM public.hisaab_schema_version")
             ),
-            "0019_transaction_contributions",
+            "0020_authenticated_imports",
         )
 
     def test_downgrade_refuses_to_discard_contribution_history(self):
@@ -161,7 +161,7 @@ class MigrationPostgresTests(PostgresTests):
             self.connection.scalar(
                 text("SELECT version_num FROM public.hisaab_schema_version")
             ),
-            "0019_transaction_contributions",
+            "0020_authenticated_imports",
         )
         self.assertEqual(
             self.connection.scalar(text("SELECT count(*) FROM hisaab.contributions")), 1
