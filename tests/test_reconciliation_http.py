@@ -155,8 +155,16 @@ class ReconciliationHTTPTests(ReconciliationFixture):
         row = self.totals()[0]
         self.assertEqual(Decimal(row["net"]), Decimal("105.20"))
         self.assertEqual(row["entry_count"], 53)
-        code, entries = self.call("/funding_entries?limit=50&offset=50", self.tokens[0])
-        self.assertEqual(code, 200)
+        # Included entries are requested for a specific reconciliation group,
+        # matching FundingEntries rather than scanning every possible group.
+        query = (
+            "/funding_entries?limit=50&offset=50&order=id"
+            + "&card_id=eq." + str(self.records[0].card.id)
+            + "&account_id=eq." + self.account["id"]
+            + "&currency=eq.INR&month=eq.2026-01-01"
+        )
+        code, entries = self.call(query, self.tokens[0])
+        self.assertEqual(code, 200, entries)
         self.assertEqual(len(entries), 3)
         self.assertEqual(row["month"], "2026-01-01")
         self.assertFalse(row["blocked"])
