@@ -75,6 +75,14 @@ export default function Workspace({
   const [describing, setDescribing] = useState<Entry | null>(null);
   const descriptionTrigger = useRef<HTMLButtonElement | null>(null);
   const [search, setSearch] = useState("");
+  const [accountFilter, setAccountFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const assignmentFilters = {
+    accountId:
+      accountFilter === "unassigned" ? null : accountFilter || undefined,
+    categoryId:
+      categoryFilter === "unassigned" ? null : categoryFilter || undefined,
+  };
   const [reviewing, setReviewing] = useState<Entry | null>(null);
   const reviewTrigger = useRef<HTMLButtonElement | null>(null);
   const [notice, setNotice] = useState("");
@@ -127,7 +135,11 @@ export default function Workspace({
             row.friendly_description,
           ].some((value) =>
             value?.toLowerCase().includes(search.toLowerCase().trim()),
-          ),
+          ) &&
+          (!accountFilter ||
+            (row.account_id ?? "unassigned") === accountFilter) &&
+          (!categoryFilter ||
+            (row.category_id ?? "unassigned") === categoryFilter),
       ),
       dateSort,
     );
@@ -142,6 +154,7 @@ export default function Workspace({
           dateBasis,
           dateSort,
           search,
+          assignmentFilters,
         )
       : Promise.resolve({
           rows: filtered.slice(offset, offset + 50),
@@ -169,6 +182,7 @@ export default function Workspace({
                 dateBasis,
                 dateSort,
                 search,
+                assignmentFilters,
               );
               labelStore.reload();
             }
@@ -208,6 +222,8 @@ export default function Workspace({
     dateBasis,
     dateSort,
     search,
+    accountFilter,
+    categoryFilter,
   ]);
   useEffect(() => {
     if (loading || saving || !pendingFocus.current) return;
@@ -428,6 +444,11 @@ export default function Workspace({
     setNotice(
       "Assignments saved. Source facts and review issues are unchanged.",
     );
+    if (accountFilter || categoryFilter) {
+      setOffset(0);
+      setLoading(true);
+      setRefresh((n) => n + 1);
+    }
   }
   function assignmentSelect(row: Entry, kind: "account" | "category") {
     const field = kind === "account" ? "account_id" : "category_id";
@@ -800,6 +821,45 @@ export default function Workspace({
                       }}
                     />
                   </label>
+                </div>
+                <div className="date-range">
+                  {(["account", "category"] as const).map((kind) => (
+                    <label key={kind}>
+                      {kind === "account"
+                        ? "Filter by account"
+                        : "Filter by category"}
+                      <select
+                        aria-label={`Filter by ${kind}`}
+                        value={
+                          kind === "account" ? accountFilter : categoryFilter
+                        }
+                        disabled={saving || labelStore.loading}
+                        onChange={(event) => {
+                          if (kind === "account")
+                            setAccountFilter(event.target.value);
+                          else setCategoryFilter(event.target.value);
+                          setOffset(0);
+                          resetDetails();
+                        }}
+                      >
+                        <option value="">
+                          {kind === "account"
+                            ? "All accounts"
+                            : "All categories"}
+                        </option>
+                        <option value="unassigned">Unassigned</option>
+                        {labelStore.labels
+                          .filter((label) => label.kind === kind)
+                          .sort((a, b) => compareLabelNames(a.name, b.name))
+                          .map((label) => (
+                            <option key={label.id} value={label.id}>
+                              {label.name}
+                              {label.is_archived ? " (archived)" : ""}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                  ))}
                 </div>
                 <div className="date-range">
                   <label>

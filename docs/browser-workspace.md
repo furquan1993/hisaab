@@ -274,3 +274,14 @@ native recovery and parser/persistence regressions. CI runs both jobs separately
 - https://vite.dev/guide/env-and-mode
 - https://vite.dev/guide/static-deploy
 - https://docs.github.com/en/pages/getting-started-with-github-pages/about-github-pages
+
+
+### Filter statement transactions
+
+In **Statements**, use **Account** and **Category** beside **Search descriptions**
+to narrow the transaction list. Choose a named label (including archived labels),
+**Unassigned**, or **All accounts / All categories** to remove that filter.
+Filters combine with each other, description search and the selected date view.
+They apply before pagination, so **Matching entries** counts every matching row.
+Changing either filter returns to the first page. Changing an entry's assignment
+while filtering refreshes the list so entries that no longer match disappear.

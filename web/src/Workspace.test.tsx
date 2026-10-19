@@ -248,3 +248,72 @@ it("passes description searches to the paginated API and resets to the first pag
     expect(vi.mocked(readPage).mock.lastCall?.[8]).toBe("Amazon");
   });
 });
+
+it("combines account and category filters with search and resets pagination", async () => {
+  const user = userEvent.setup();
+  vi.mocked(readPage).mockResolvedValue({ rows: [demoEntries[0]], total: 101 });
+  render(
+    <Workspace
+      api={{} as BrowserClient}
+      owner="Owner"
+      initialRange={["2026-01-01", "2026-01-31"]}
+      onExit={() => {}}
+    />,
+  );
+  await screen.findByText(demoEntries[0].description);
+  await user.click(screen.getByRole("button", { name: "Next" }));
+  await waitFor(() => expect(vi.mocked(readPage).mock.lastCall?.[4]).toBe(50));
+  await user.selectOptions(screen.getByLabelText("Filter by account"), "pot");
+  await user.selectOptions(screen.getByLabelText("Filter by category"), "food");
+  await user.type(screen.getByLabelText("Search descriptions"), "train");
+  await waitFor(() => {
+    const call = vi.mocked(readPage).mock.lastCall;
+    expect(call?.[4]).toBe(0);
+    expect(call?.[8]).toBe("train");
+    expect(call?.[9]).toEqual({ accountId: "pot", categoryId: "food" });
+  });
+  await user.selectOptions(
+    screen.getByLabelText("Filter by account"),
+    "unassigned",
+  );
+  await user.selectOptions(screen.getByLabelText("Filter by category"), "");
+  await waitFor(() =>
+    expect(vi.mocked(readPage).mock.lastCall?.[9]).toEqual({
+      accountId: null,
+      categoryId: undefined,
+    }),
+  );
+});
+
+it("filters demo transactions by assignments and description together", async () => {
+  const user = userEvent.setup();
+  render(
+    <Workspace
+      api={null}
+      owner="Demo"
+      initialRange={["2026-01-01", "2026-01-31"]}
+      onExit={() => {}}
+    />,
+  );
+  const description = demoEntries.find(
+    (r) => r.is_selected && r.statement_date?.startsWith("2026-01"),
+  )!.description;
+  await user.type(screen.getByLabelText("Search descriptions"), description);
+  const account = await screen.findByLabelText(`Account for ${description}`);
+  await user.selectOptions(account, "pot");
+  await user.selectOptions(screen.getByLabelText("Filter by account"), "pot");
+  await screen.findByLabelText(`Account for ${description}`);
+  await user.selectOptions(screen.getByLabelText("Filter by category"), "food");
+  await waitFor(() =>
+    expect(screen.queryByLabelText(`Account for ${description}`)).toBeNull(),
+  );
+  await user.selectOptions(
+    screen.getByLabelText("Filter by category"),
+    "unassigned",
+  );
+  const reassigned = await screen.findByLabelText(`Account for ${description}`);
+  await user.selectOptions(reassigned, "");
+  await waitFor(() =>
+    expect(screen.queryByLabelText(`Account for ${description}`)).toBeNull(),
+  );
+});

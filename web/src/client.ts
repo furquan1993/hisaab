@@ -29,6 +29,12 @@ export const client = validatePublicConfig(url, key)
 
 export type BrowserClient = NonNullable<typeof client>;
 
+// Undefined includes every assignment; null includes only unassigned entries.
+export type EntryAssignmentFilters = {
+  accountId?: string | null;
+  categoryId?: string | null;
+};
+
 export async function readPage(
   api: BrowserClient,
   view: View,
@@ -39,6 +45,7 @@ export async function readPage(
   basis: DateBasis = "original",
   sort: DateSort = "newest",
   search = "",
+  assignments: EntryAssignmentFilters = {},
 ) {
   let query = api.from("entries").select("*", { count: "exact" });
   if (view === "review") query = query.eq("needs_review", true);
@@ -47,6 +54,13 @@ export async function readPage(
       (basis === "reviewed" ? "effective_" : "") +
       (view === "statement" ? "statement_date" : "transaction_date");
     query = query.eq("is_selected", true).gte(field, start).lte(field, end);
+  }
+  for (const [field, value] of [
+    ["account_id", assignments.accountId],
+    ["category_id", assignments.categoryId],
+  ] as const) {
+    if (value === null) query = query.is(field, null);
+    else if (value !== undefined) query = query.eq(field, value);
   }
   if (search.trim()) {
     // Quote PostgREST values; escape LIKE wildcards so search remains literal.
