@@ -45,7 +45,7 @@ class OfflineMigrationTests(unittest.TestCase):
     def test_single_head_and_no_secret_in_configuration(self):
         config = migration_config()
         self.assertEqual(
-            ScriptDirectory.from_config(config).get_heads(), ["0016_friendly_descriptions"]
+            ScriptDirectory.from_config(config).get_heads(), ["0018_card_management"]
         )
         self.assertIsNone(config.get_main_option("sqlalchemy.url"))
 
@@ -105,7 +105,7 @@ class MigrationPostgresTests(PostgresTests):
             self.connection.scalar(
                 text("SELECT version_num FROM public.hisaab_schema_version")
             ),
-            "0016_friendly_descriptions",
+            "0018_card_management",
         )
 
     def test_downgrade_refuses_to_discard_contribution_history(self):
@@ -143,7 +143,7 @@ class MigrationPostgresTests(PostgresTests):
             self.connection.scalar(
                 text("SELECT version_num FROM public.hisaab_schema_version")
             ),
-            "0016_friendly_descriptions",
+            "0018_card_management",
         )
         self.assertEqual(
             self.connection.scalar(text("SELECT count(*) FROM hisaab.contributions")), 1

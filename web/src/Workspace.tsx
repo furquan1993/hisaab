@@ -22,6 +22,8 @@ import type { Confirmation, Contribution } from "./funding-domain";
 import Evidence from "./Evidence";
 import FriendlyDescriptionEditor from "./FriendlyDescriptionEditor";
 import Labels from "./Labels";
+import Cards from "./Cards";
+import { useCards } from "./useCards";
 import { useLabels } from "./useLabels";
 import AssignmentEditor, { type AssignmentPatch } from "./AssignmentEditor";
 import Imports from "./Imports";
@@ -52,12 +54,14 @@ export default function Workspace({
     | "summary"
     | "statements"
     | "account"
+    | "cards"
     | "category"
     | "imports"
     | "reconciliation"
     | "spending"
   >("statements");
   const labelStore = useLabels(api, ownerId);
+  const cardStore = useCards(api, ownerId, section === "cards");
   const [fundingMonth, setFundingMonth] = useState(initialRange[0].slice(0, 7));
   const [fundingBusy, setFundingBusy] = useState(false);
   const [contributions, setContributions] = useState<Contribution[]>([]);
@@ -605,6 +609,7 @@ export default function Workspace({
             ["spending", "Spending"],
             ["statements", "Statements"],
             ["reconciliation", "Reconciliation"],
+            ["cards", "Cards"],
             ["account", "Accounts"],
             ["category", "Categories"],
             ["imports", "Imports"],
@@ -653,11 +658,13 @@ export default function Workspace({
                     ? "Statements"
                     : section === "reconciliation"
                       ? "Reconciliation"
-                      : section === "account"
-                        ? "Accounts"
-                        : section === "imports"
-                          ? "Imports"
-                          : "Categories"}
+                      : section === "cards"
+                        ? "Cards"
+                        : section === "account"
+                          ? "Accounts"
+                          : section === "imports"
+                            ? "Imports"
+                            : "Categories"}
             </strong>
           </span>
           <button className="quiet" disabled={saving} onClick={onExit}>
@@ -749,6 +756,25 @@ export default function Workspace({
             }}
             onImports={() => setSection("imports")}
             onBusyChange={setFundingBusy}
+          />
+        ) : section === "cards" ? (
+          <Cards
+            {...cardStore}
+            onReload={cardStore.reload}
+            onBusyChange={setFundingBusy}
+            onSave={async (draft) => {
+              const card = await cardStore.save(draft);
+              if (!api)
+                setDemoRows((current) =>
+                  current.map((row) =>
+                    row.card_id === card.id
+                      ? { ...row, card_label: card.label, bank: card.bank }
+                      : row,
+                  ),
+                );
+              else setRefresh((n) => n + 1);
+              return card;
+            }}
           />
         ) : section !== "statements" ? (
           <Labels

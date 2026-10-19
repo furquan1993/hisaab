@@ -308,3 +308,10 @@ The separately approved `0016_friendly_descriptions` rollout completed on 2026-1
 after a fresh private backup and verified restore rehearsal. Friendly descriptions
 use independent versions and preserve financial decisions and settlement checks.
 See [usage and verification](friendly-descriptions.md).
+
+## Card management
+
+The **Cards** sidebar view supports adding and editing credit cards. See
+[card fields, behavior and rollout](cards.md). The approved
+`0018_card_management` database rollout completed on 2026-10-19 after backup
+restore verification and rehearsal. The frontend release is separate.

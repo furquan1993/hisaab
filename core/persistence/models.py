@@ -80,10 +80,12 @@ class Card(Identity, CreatedAt, Owned, Base):
         CheckConstraint(
             "last_four IS NULL OR length(last_four) = 4", name="ck_cards_last_four"
         ),
+        CheckConstraint("version > 0", name="ck_cards_version"),
     )
     bank: Mapped[str] = mapped_column(String(32), nullable=False)
     label: Mapped[str] = mapped_column(Text, nullable=False)
     last_four: Mapped[str | None] = mapped_column(String(4))
+    version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
     statements: Mapped[list["Statement"]] = relationship(viewonly=True, lazy="raise")
 
 

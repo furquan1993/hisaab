@@ -41,6 +41,7 @@ class Category(Identity, CreatedAt, Owned, LabelFields, Base):
 
 
 class FundingAccount(Identity, CreatedAt, Owned, LabelFields, Base):
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     __tablename__ = "accounts"
     __table_args__ = (
         UniqueConstraint("owner_id", "id", name="uq_accounts_owner_id"),

@@ -26,7 +26,7 @@
                     <mxGeometry height="26" width="280" y="116" as="geometry"/>
                 </mxCell>
                 <mxCell id="card" parent="1" style="swimlane;html=0;startSize=38;horizontal=1;rounded=1;arcSize=6;collapsible=0;container=1;fillColor=#dcfce7;swimlaneFillColor=#ffffff;strokeColor=#94a3b8;fontSize=19;fontStyle=1;fontColor=#0f172a;align=left;spacingLeft=14;" value="Card" vertex="1">
-                    <mxGeometry height="194" width="300" x="400" y="210" as="geometry"/>
+                    <mxGeometry height="220" width="300" x="400" y="210" as="geometry"/>
                 </mxCell>
                 <mxCell id="card_id" parent="card" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="PK  id : UUID" vertex="1">
                     <mxGeometry height="26" width="300" y="38" as="geometry"/>
@@ -45,6 +45,9 @@
                 </mxCell>
                 <mxCell id="card_created_at" parent="card" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#f8fafc;strokeColor=none;connectable=1;" value="    created_at : TIMESTAMP UTC" vertex="1">
                     <mxGeometry height="26" width="300" y="168" as="geometry"/>
+                </mxCell>
+                <mxCell id="card_version" parent="card" style="text;html=0;align=left;verticalAlign=middle;spacingLeft=12;whiteSpace=wrap;overflow=hidden;fontFamily=Courier New;fontSize=12;fontColor=#1e293b;fillColor=#ffffff;strokeColor=none;connectable=1;" value="    version : INTEGER" vertex="1">
+                    <mxGeometry height="26" width="300" y="194" as="geometry"/>
                 </mxCell>
                 <mxCell id="statement" parent="1" style="swimlane;html=0;startSize=38;horizontal=1;rounded=1;arcSize=6;collapsible=0;container=1;fillColor=#fef3c7;swimlaneFillColor=#ffffff;strokeColor=#94a3b8;fontSize=19;fontStyle=1;fontColor=#0f172a;align=left;spacingLeft=14;" value="Statement" vertex="1">
                     <mxGeometry height="194" width="350" x="800" y="210" as="geometry"/>
