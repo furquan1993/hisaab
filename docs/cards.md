@@ -10,9 +10,10 @@ after an import it is fixed so existing statements retain their bank identity.
 Names and last four digits remain editable. Renaming a card updates its display
 name in statement and reconciliation views without changing transactions.
 
-Saved cards show their ID for the existing statement-import workflow. Adding a
-card does not import a statement. Demo cards and edits last only for the current
-synthetic demo session.
+Saved cards appear in the **Card to import into** dropdown under **Imports &
+parser versions**, including cards without any statements. Selecting a card fills
+its ID in the import command. Adding a card does not import a statement. Demo
+cards and edits last only for the current synthetic demo session.
 
 ## API and rollout
 

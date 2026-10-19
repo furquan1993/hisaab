@@ -4,8 +4,8 @@ import type { BrowserClient } from "./client";
 import type { Source } from "./revisions-client";
 
 const cardSchema = z.object({
-  card_id: z.string().uuid(),
-  card_label: z.string(),
+  id: z.string().uuid(),
+  label: z.string(),
 });
 type Card = z.infer<typeof cardSchema>;
 
@@ -34,8 +34,9 @@ export default function ImportCommands({
       const all: Card[] = [];
       for (let offset = 0; ; offset += 100) {
         const { data, error } = await api
-          .from("statement_bills")
-          .select("card_id,card_label")
+          .from("cards")
+          .select("id,label")
+          .order("label")
           .order("id")
           .range(offset, offset + 99)
           .abortSignal(controller.signal);
@@ -44,10 +45,7 @@ export default function ImportCommands({
         all.push(...page);
         if (page.length < 100) break;
       }
-      if (!controller.signal.aborted)
-        setCards([
-          ...new Map(all.map((card) => [card.card_id, card])).values(),
-        ]);
+      if (!controller.signal.aborted) setCards(all);
     })()
       .catch(() => {
         if (!controller.signal.aborted)
@@ -68,8 +66,7 @@ export default function ImportCommands({
     return <p>Reload your signed-in workspace to load import commands.</p>;
   if (loading) return <p role="status">Loading import commands…</p>;
   if (error) return <p role="alert">{error}</p>;
-  const selectedCard =
-    cards.find((card) => card.card_id === cardId) ?? cards[0];
+  const selectedCard = cards.find((card) => card.id === cardId) ?? cards[0];
   const selectedSource =
     sources.find((source) => source.id === importId) ?? sources[0];
   return (
@@ -81,12 +78,12 @@ export default function ImportCommands({
             Card to import into
             <span className="import-select">
               <select
-                value={selectedCard.card_id}
+                value={selectedCard.id}
                 onChange={(event) => setCardId(event.target.value)}
               >
                 {cards.map((card) => (
-                  <option key={card.card_id} value={card.card_id}>
-                    {card.card_label}
+                  <option key={card.id} value={card.id}>
+                    {card.label}
                   </option>
                 ))}
               </select>
@@ -97,14 +94,13 @@ export default function ImportCommands({
             directory.
           </p>
           <pre>
-            <code>{`uv run python -m core import-pdf --owner ${ownerId} --card ${selectedCard.card_id} data/statement.pdf`}</code>
+            <code>{`uv run python -m core import-pdf --owner ${ownerId} --card ${selectedCard.id} data/statement.pdf`}</code>
           </pre>
         </section>
       ) : (
         <p>
-          No card IDs available from selected statements yet. Use the local
-          CLI’s cards-list command to find a registered card for your first
-          import.
+          No saved cards yet. Add a card in Cards before importing your first
+          statement.
         </p>
       )}
       {selectedSource && (

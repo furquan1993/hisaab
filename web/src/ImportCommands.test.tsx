@@ -20,19 +20,21 @@ function apiResult(data: unknown, error: unknown = null) {
   return { api: { from } as unknown as BrowserClient, from, query };
 }
 
-it("fills the owner and card UUIDs, deduplicates cards, and updates the command when switching cards", async () => {
+it("lists saved cards even without statements and updates the command when switching cards", async () => {
   const user = userEvent.setup();
-  const first = { card_id: firstCard, card_label: "First card" };
+  const first = { id: firstCard, label: "First card" };
   const { api, from, query } = apiResult([
     first,
-    first,
-    { card_id: secondCard, card_label: "Second card" },
+    { id: secondCard, label: "New card without statements" },
   ]);
   render(<ImportCommands api={api} ownerId={owner} sources={[]} />);
   const select = await screen.findByLabelText("Card to import into");
-  expect(from).toHaveBeenCalledWith("statement_bills");
-  expect(query.select).toHaveBeenCalledWith("card_id,card_label");
+  expect(from).toHaveBeenCalledWith("cards");
+  expect(query.select).toHaveBeenCalledWith("id,label");
   expect(screen.getAllByRole("option")).toHaveLength(2);
+  expect(
+    screen.getByRole("option", { name: "New card without statements" }),
+  ).toBeTruthy();
   expect(
     screen.getByText(
       `uv run python -m core import-pdf --owner ${owner} --card ${firstCard} data/statement.pdf`,
@@ -53,8 +55,43 @@ it("does not show an incomplete command when no card IDs are available", async (
   const { container } = render(
     <ImportCommands api={api} ownerId={owner} sources={[]} />,
   );
-  await screen.findByText(/No card IDs available/);
+  await screen.findByText(/No saved cards yet/);
   expect(container.querySelector("code")).toBeNull();
+});
+
+it("loads every page of saved cards", async () => {
+  const page = Array.from({ length: 100 }, (_, index) => ({
+    id: `22222222-2222-4222-8222-${String(index).padStart(12, "0")}`,
+    label: `Card ${index}`,
+  }));
+  const { api, query } = apiResult([]);
+  query.abortSignal
+    .mockResolvedValueOnce({ data: page, error: null })
+    .mockResolvedValueOnce({
+      data: [{ id: secondCard, label: "Last card" }],
+      error: null,
+    });
+  render(<ImportCommands api={api} ownerId={owner} sources={[]} />);
+  await screen.findByLabelText("Card to import into");
+  expect(screen.getAllByRole("option")).toHaveLength(101);
+  expect(query.order.mock.calls).toEqual([
+    ["label"],
+    ["id"],
+    ["label"],
+    ["id"],
+  ]);
+  expect(query.range.mock.calls).toEqual([
+    [0, 99],
+    [100, 199],
+  ]);
+  await userEvent
+    .setup()
+    .selectOptions(screen.getByLabelText("Card to import into"), secondCard);
+  expect(
+    screen.getByText(
+      `uv run python -m core import-pdf --owner ${owner} --card ${secondCard} data/statement.pdf`,
+    ),
+  ).toBeTruthy();
 });
 
 it("shows a loading failure without inventing UUIDs", async () => {
