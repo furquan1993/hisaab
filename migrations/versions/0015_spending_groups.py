@@ -64,6 +64,13 @@ def downgrade():
     if not op.get_context().as_sql:
         if op.get_bind().scalar(sa.text("SELECT EXISTS(SELECT 1 FROM hisaab.spending_groups) OR EXISTS(SELECT 1 FROM hisaab.spending_assignments) OR EXISTS(SELECT 1 FROM hisaab.spending_events)")):
             raise CommandError("Spending groups or history exist. Export and review them before downgrading.")
+    # Restore the pre-Spending query and its read-only browser grant.
+    source = (SQL / "0011_contribution_views.sql").read_text()
+    start = source.index("CREATE VIEW hisaab_api.funding_entries ")
+    end = source.index(";", start) + 1
+    op.execute("DROP VIEW hisaab_api.funding_entries")
+    op.execute(source[start:end])
+    op.execute("DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='authenticated') THEN GRANT SELECT ON hisaab_api.funding_entries TO authenticated; END IF; END $$")
     op.execute("DROP VIEW hisaab_api.spending_entries, hisaab_api.spending_groups")
     op.execute("DROP FUNCTION hisaab_api.save_spending_group(text,uuid,integer,boolean,uuid), hisaab_api.assign_spending_group(uuid,jsonb,uuid)")
     for table in ("spending_events", "spending_assignments", "spending_groups"):

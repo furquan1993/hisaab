@@ -130,4 +130,13 @@ DO $$ DECLARE role_ text; BEGIN
   GRANT EXECUTE ON FUNCTION hisaab_api.save_spending_group(text,uuid,integer,boolean,uuid),hisaab_api.assign_spending_group(uuid,jsonb,uuid) TO authenticated;
  END IF;
 END $$;
+-- Read reviewed entries once instead of expanding them both through funding_rows
+-- and entries. Keep the existing included-entry API fields and invoker security.
+CREATE OR REPLACE VIEW hisaab_api.funding_entries WITH (security_invoker=true) AS
+ SELECT i.card_id,b.account_id,b.effective_currency AS currency,
+ date_trunc('month',b.effective_statement_date)::date AS month,
+ b.id,b.description,b.effective_description,b.effective_amount,
+ b.effective_direction,b.effective_entry_type,b.effective_transaction_date
+ FROM hisaab_api.entries b JOIN hisaab.imports i ON i.id=b.import_id
+ WHERE b.is_selected AND b.effective_entry_type<>'payment';
 NOTIFY pgrst,'reload schema';
