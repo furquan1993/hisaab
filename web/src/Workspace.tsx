@@ -1,3 +1,8 @@
+import {
+  deleteAccount,
+  previewAccountDeletion,
+  type AccountDeletion,
+} from "./account-deletion";
 import { compareLabelNames } from "./label-order";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { readPage, type BrowserClient } from "./client";
@@ -721,6 +726,7 @@ export default function Workspace({
         ) : section === "imports" ? (
           <Imports
             api={api}
+            ownerId={ownerId}
             demoRows={demoRows.current}
             onDemoDecision={demoSourceDecision}
             onDemoCoverage={demoStatementReview}
@@ -783,6 +789,40 @@ export default function Workspace({
             {...labelStore}
             onSave={labelStore.save}
             onReload={labelStore.reload}
+            onPreviewDelete={async (label) =>
+              api
+                ? previewAccountDeletion(api, ownerId, label.id)
+                : {
+                    account: label,
+                    entries: demoRows.current.filter(
+                      (entry) => entry.account_id === label.id,
+                    ),
+                    token: "demo",
+                  }
+            }
+            onDelete={async (preview: AccountDeletion) => {
+              if (api) await deleteAccount(api, ownerId, preview);
+              else
+                setDemoRows((current) =>
+                  current.map((entry) =>
+                    entry.account_id === preview.account.id
+                      ? {
+                          ...entry,
+                          account_id: null,
+                          account_name: null,
+                          decision_version: entry.decision_version + 1,
+                        }
+                      : entry,
+                  ),
+                );
+              labelStore.remove(preview.account.id);
+              if (accountFilter === preview.account.id) setAccountFilter("");
+              setSelected(null);
+              setEditing(null);
+              setReviewing(null);
+              setOffset(0);
+              setRefresh((n) => n + 1);
+            }}
           />
         ) : (
           <section className="page">

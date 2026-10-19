@@ -1,5 +1,7 @@
+import DeleteAccount from "./DeleteAccount";
+import type { AccountDeletion } from "./account-deletion";
 import { compareLabelNames } from "./label-order";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import type { Label, LabelDraft } from "./useLabels";
 
 export default function Labels({
@@ -9,6 +11,8 @@ export default function Labels({
   error,
   onSave,
   onReload,
+  onPreviewDelete,
+  onDelete,
 }: {
   kind: Label["kind"];
   labels: Label[];
@@ -16,7 +20,12 @@ export default function Labels({
   error: string;
   onSave: (draft: LabelDraft) => Promise<Label>;
   onReload: () => void;
+  onPreviewDelete: (label: Label) => Promise<AccountDeletion>;
+  onDelete: (preview: AccountDeletion) => Promise<void>;
 }) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  const [deleting, setDeleting] = useState<AccountDeletion | null>(null);
+  const deleteTrigger = useRef<HTMLButtonElement | null>(null);
   const [editing, setEditing] = useState<Label | null>(null);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -77,10 +86,48 @@ export default function Labels({
       setBusy(false);
     }
   }
+  async function previewDelete(label: Label) {
+    setBusy(true);
+    setFailure("");
+    setNotice("");
+    try {
+      setDeleting(await onPreviewDelete(label));
+    } catch (e) {
+      setFailure(
+        e instanceof Error
+          ? e.message
+          : "Could not load affected transactions.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  function closeDelete() {
+    setDeleting(null);
+    deleteTrigger.current?.focus();
+  }
   return (
     <section className="page label-page">
+      {deleting && (
+        <DeleteAccount
+          preview={deleting}
+          onClose={closeDelete}
+          onConfirm={async () => {
+            await onDelete(deleting);
+            if (editing?.id === deleting.account.id) {
+              setEditing(null);
+              setName("");
+            }
+            setDeleting(null);
+            requestAnimationFrame(() => heading.current?.focus());
+            setNotice("Account deleted. Its transactions are now unassigned.");
+          }}
+        />
+      )}
       <span className="eyebrow">YOUR OWN VOCABULARY</span>
-      <h1>{kind === "account" ? "Accounts" : "Categories"}</h1>
+      <h1 ref={heading} tabIndex={-1}>
+        {kind === "account" ? "Accounts" : "Categories"}
+      </h1>
       <p>
         {kind === "account"
           ? "An Account is a budget or funding pot, not a credit card. It is independent of Category."
@@ -182,6 +229,20 @@ export default function Labels({
                 >
                   {label.is_archived ? "Restore" : "Archive"}
                 </button>
+                {kind === "account" && (
+                  <button
+                    type="button"
+                    className="danger"
+                    disabled={busy || loading || !!error}
+                    aria-label={"Delete " + label.name}
+                    onClick={(event) => {
+                      deleteTrigger.current = event.currentTarget;
+                      void previewDelete(label);
+                    }}
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             </li>
           ))}

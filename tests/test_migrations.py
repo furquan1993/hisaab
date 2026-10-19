@@ -45,7 +45,7 @@ class OfflineMigrationTests(unittest.TestCase):
     def test_single_head_and_no_secret_in_configuration(self):
         config = migration_config()
         self.assertEqual(
-            ScriptDirectory.from_config(config).get_heads(), ["0018_card_management"]
+            ScriptDirectory.from_config(config).get_heads(), ["0019_transaction_contributions"]
         )
         self.assertIsNone(config.get_main_option("sqlalchemy.url"))
 
@@ -75,6 +75,24 @@ class OfflineMigrationTests(unittest.TestCase):
 
 
 class MigrationPostgresTests(PostgresTests):
+    def test_transaction_downgrade_refuses_to_hide_settlement_history(self):
+        records = seed(self.session)
+        account = FundingAccount(owner_id=records.owner.id, name="Synthetic transaction pot")
+        self.session.add(account)
+        self.session.flush()
+        self.session.add(Contribution(
+            owner_id=records.owner.id, card_id=records.card.id, account_id=account.id,
+            currency="INR", month=date(2026, 1, 1), amount=Decimal("123.45"),
+            received_on=date(2026, 2, 1), note="", request=[], actor_auth_user_id=uuid4(),
+            applications=[{"month": "2026-01-01", "amount": "123.45", "fingerprint": "synthetic",
+                "entries": [{"entry_id": str(records.entry.id), "logical_entry_id": str(records.entry.id),
+                    "description": "Synthetic shop", "amount": "123.45"}]}],
+        ))
+        self.session.flush()
+        with self.assertRaises(CommandError), self.connection.begin_nested():
+            command.downgrade(migration_config(self.connection), "0018_card_management")
+        self.assertEqual(self.connection.scalar(text("SELECT version_num FROM public.hisaab_schema_version")), "0019_transaction_contributions")
+
     def test_downgrade_refuses_to_discard_spending_groups(self):
         records = seed(self.session)
         self.session.add(SpendingGroup(owner_id=records.owner.id, name="Synthetic retained trip"))
@@ -105,7 +123,7 @@ class MigrationPostgresTests(PostgresTests):
             self.connection.scalar(
                 text("SELECT version_num FROM public.hisaab_schema_version")
             ),
-            "0018_card_management",
+            "0019_transaction_contributions",
         )
 
     def test_downgrade_refuses_to_discard_contribution_history(self):
@@ -143,7 +161,7 @@ class MigrationPostgresTests(PostgresTests):
             self.connection.scalar(
                 text("SELECT version_num FROM public.hisaab_schema_version")
             ),
-            "0018_card_management",
+            "0019_transaction_contributions",
         )
         self.assertEqual(
             self.connection.scalar(text("SELECT count(*) FROM hisaab.contributions")), 1

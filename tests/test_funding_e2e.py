@@ -17,10 +17,10 @@ from tests.supabase_fixture import SupabaseTests
 @unittest.skipUnless(
     os.environ.get("HISAAB_BROWSER_TESTS") == "1", "Browser test opt-in required"
 )
-class FundingBrowserE2ETests(SupabaseTests):
+class FundingBrowserFixture(SupabaseTests):
     run_frontend = browser_fixture.BrowserE2ETests.run_frontend
 
-    def test_full_partial_reload_and_reasoned_reconfirmation(self):
+    def seed_months(self):
         base = self.records[0]
         with self.engine.begin() as c:
             c.execute(
@@ -52,4 +52,15 @@ class FundingBrowserE2ETests(SupabaseTests):
                     imported, description="SYNTHETIC FEB SHOP", amount=Decimal("50.00")
                 )
             )
-        self.run_frontend(("funding-smoke.mjs",))
+
+
+class FundingBrowserE2ETests(FundingBrowserFixture):
+    def test_full_partial_reload_and_reasoned_reconfirmation(self):
+        self.seed_months()
+        self.run_frontend(("funding-smoke.mjs",), port=5187)
+
+
+class TransactionFundingBrowserE2ETests(FundingBrowserFixture):
+    def test_selected_whole_transactions_and_reload(self):
+        self.seed_months()
+        self.run_frontend(("transaction-funding-smoke.mjs",), port=5187)

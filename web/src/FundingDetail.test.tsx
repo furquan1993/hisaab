@@ -40,8 +40,23 @@ const preview: FundingPreview = {
     },
   ],
 };
-async function setup() {
-  vi.mocked(loadFundingDetail).mockResolvedValue({ preview, history: [] });
+async function setup(monthly = true) {
+  vi.mocked(loadFundingDetail).mockResolvedValue({
+    preview,
+    history: [],
+    transactions: [
+      {
+        id: "entry",
+        logical_entry_id: "entry",
+        month: scope.month,
+        description: "Synthetic purchase",
+        amount: "100.00",
+        transaction_date: "2026-01-20",
+        settled: false,
+        legacy_funded: false,
+      },
+    ],
+  });
   const changed = vi.fn(),
     busy = vi.fn(),
     user = userEvent.setup();
@@ -52,6 +67,7 @@ async function setup() {
       scope={scope}
       cardLabel="Synthetic card"
       accountName="Synthetic account"
+      demoRows={[]}
       demoGroups={[]}
       demoReceipts={[]}
       onDemoReceipt={vi.fn()}
@@ -62,6 +78,11 @@ async function setup() {
     />,
   );
   await screen.findByText("Outstanding: INR 100.00");
+  if (monthly)
+    await user.selectOptions(
+      screen.getByLabelText("Contribute towards"),
+      "month",
+    );
   return { user, changed, busy };
 }
 it("retries an uncertain contribution with the same immutable request and captured state", async () => {
@@ -121,4 +142,37 @@ it("keeps the draft editable after a definite server rejection", async () => {
     screen.queryByRole("button", { name: "Retry same contribution" }),
   ).toBeNull();
   expect(busy).toHaveBeenLastCalledWith(false);
+});
+
+it("sends only selected whole transaction IDs and retains them on uncertain retry", async () => {
+  const { user } = await setup(false);
+  expect(screen.queryByLabelText("Partial contribution amount")).toBeNull();
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Settle selected transactions",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  await user.click(
+    screen.getByRole("checkbox", { name: "Synthetic purchase · INR 100.00" }),
+  );
+  expect(screen.getByText("Contribution total: INR 100.00")).toBeTruthy();
+  vi.mocked(recordContribution).mockRejectedValueOnce(Error("Connection lost"));
+  await user.click(
+    screen.getByRole("button", { name: "Settle selected transactions" }),
+  );
+  const first = vi.mocked(recordContribution).mock.calls[0];
+  expect(first[2]).toMatchObject({ amount: null, entry_ids: ["entry"] });
+  expect(
+    (
+      screen.getByRole("combobox", {
+        name: "Contribute towards",
+      }) as HTMLSelectElement
+    ).disabled,
+  ).toBe(true);
+  await user.click(
+    screen.getByRole("button", { name: "Retry same contribution" }),
+  );
+  expect(vi.mocked(recordContribution).mock.calls[1][2]).toEqual(first[2]);
 });

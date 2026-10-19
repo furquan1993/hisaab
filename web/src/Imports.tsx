@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { BrowserClient } from "./client";
 import type { Entry } from "./domain";
 import Evidence from "./Evidence";
+import ImportCommands from "./ImportCommands";
 import StatementReview, { type StatementReviewSave } from "./StatementReview";
 import RevisionReview, { SourceTable } from "./RevisionReview";
 import {
@@ -16,12 +17,14 @@ import {
 
 export default function Imports({
   api,
+  ownerId,
   demoRows,
   onDemoDecision,
   onDemoCoverage,
   onChanged,
 }: {
   api: BrowserClient | null;
+  ownerId?: string;
   demoRows: Entry[];
   onDemoDecision: (
     candidate: string,
@@ -235,15 +238,7 @@ export default function Imports({
           review candidates here. Browser PDF upload is not part of this
           release.
         </p>
-        <code>
-          uv run python -m core import-pdf --owner OWNER_UUID --card CARD_UUID
-          data/statement.pdf
-        </code>
-        <br />
-        <code>
-          uv run python -m core reparse-import --owner OWNER_UUID --import-id
-          IMPORT_UUID
-        </code>
+        <ImportCommands api={api} ownerId={ownerId} sources={sources} />
       </details>
       {error && (
         <p role="alert" className="error">

@@ -25,7 +25,28 @@ export const applicationSchema = z.object({
   month: z.string(),
   amount: decimal,
   fingerprint: z.string(),
+  entries: z
+    .array(
+      z.object({
+        entry_id: z.string(),
+        logical_entry_id: z.string(),
+        description: z.string(),
+        amount: decimal,
+      }),
+    )
+    .optional(),
 });
+export const fundingTransactionSchema = z.object({
+  id: z.string(),
+  logical_entry_id: z.string(),
+  month: z.string(),
+  description: z.string(),
+  amount: decimal,
+  transaction_date: z.string().nullable(),
+  settled: z.boolean(),
+  legacy_funded: z.boolean(),
+});
+export type FundingTransaction = z.infer<typeof fundingTransactionSchema>;
 export const contributionSchema = z.object({
   id: z.string().uuid(),
   card_id: z.string(),
@@ -76,6 +97,7 @@ export type ContributionDraft = {
   amount: string | null;
   received_on: string;
   note: string;
+  entry_ids?: string[];
 };
 export const attentionSchema = z.object({
   id: z.string(),
@@ -274,6 +296,7 @@ export function demoContribution(
   scope: FundingScope,
   draft: ContributionDraft,
   token: string,
+  transactions?: FundingTransaction[],
 ): Contribution {
   const preview = demoPreview(groups, scope);
   if (preview.token !== token)
@@ -287,6 +310,50 @@ export function demoContribution(
     (sum, g) => sum + cents(g.outstanding),
     0n,
   );
+  if (draft.entry_ids) {
+    const selected = (transactions ?? []).filter((e) =>
+      draft.entry_ids!.includes(e.id),
+    );
+    if (
+      !selected.length ||
+      selected.length !== draft.entry_ids.length ||
+      selected.some((e) => e.settled || e.legacy_funded)
+    )
+      throw Error("Select available, unsettled whole transactions.");
+    const applications = preview.groups.flatMap((g) => {
+      const entries = selected
+        .filter((e) => e.month === g.month)
+        .map((e) => ({
+          entry_id: e.id,
+          logical_entry_id: e.logical_entry_id,
+          description: e.description,
+          amount: e.amount,
+        }));
+      return entries.length
+        ? [
+            {
+              month: g.month,
+              fingerprint: g.fingerprint,
+              amount: decimalText(
+                entries.reduce((sum, e) => sum + cents(e.amount), 0n),
+              ),
+              entries,
+            },
+          ]
+        : [];
+    });
+    if (applications.flatMap((a) => a.entries).length !== selected.length)
+      throw Error("Transactions are outside this reconciliation.");
+    return {
+      ...scope,
+      ...draft,
+      amount: decimalText(
+        selected.reduce((sum, e) => sum + cents(e.amount), 0n),
+      ),
+      applications,
+      created_at: new Date().toISOString(),
+    };
+  }
   let remaining = draft.amount === null ? total : cents(draft.amount);
   if (remaining <= 0n || remaining > total)
     throw Error(
@@ -315,4 +382,58 @@ export function demoContribution(
     applications,
     created_at: new Date().toISOString(),
   };
+}
+
+export function demoFundingTransactions(
+  rows: Entry[],
+  receipts: Contribution[],
+  scope: FundingScope,
+): FundingTransaction[] {
+  const settled = new Set(
+    receipts.flatMap((r) =>
+      r.applications.flatMap((a) =>
+        (a.entries ?? []).map((e) => e.logical_entry_id),
+      ),
+    ),
+  );
+  return rows
+    .flatMap((r) => {
+      const v = reviewedValues(r);
+      const date =
+        r.effective_statement_date === undefined
+          ? r.statement_date
+          : r.effective_statement_date;
+      const month = date ? date.slice(0, 7) + "-01" : null;
+      if (
+        !r.is_selected ||
+        v.entry_type === "payment" ||
+        v.direction !== "debit" ||
+        !v.amount ||
+        cents(v.amount) <= 0n ||
+        !month ||
+        month > scope.month ||
+        (r.card_id ?? r.card_label) !== scope.card_id ||
+        r.account_id !== scope.account_id ||
+        v.currency !== scope.currency ||
+        r.needs_review
+      )
+        return [];
+      return [
+        {
+          id: r.id,
+          logical_entry_id: r.logical_entry_id ?? r.id,
+          month,
+          description: v.description,
+          amount: v.amount,
+          transaction_date: v.transaction_date,
+          settled: settled.has(r.logical_entry_id ?? r.id),
+          legacy_funded: receipts.some(
+            (receipt) =>
+              sameScope(receipt, scope) &&
+              receipt.applications.some((a) => a.month === month && !a.entries),
+          ),
+        },
+      ];
+    })
+    .sort((a, b) => a.month.localeCompare(b.month) || a.id.localeCompare(b.id));
 }

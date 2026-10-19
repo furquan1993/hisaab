@@ -9,6 +9,18 @@ from tests.test_statement_balance import bill_page
 
 
 class StatementBalanceHttpTests(SupabaseTests):
+    def test_import_commands_can_read_card_ids_from_existing_bills_api(self):
+        for index, records in enumerate(self.records):
+            code, cards = self.call(
+                "/statement_bills?select=card_id,card_label&order=id&offset=0&limit=100",
+                self.tokens[index],
+            )
+            self.assertEqual(code, 200)
+            self.assertEqual(cards, [{
+                "card_id": str(records.card.id),
+                "card_label": records.card.label,
+            }])
+
     def test_printed_bills_are_selected_owner_scoped_and_read_only(self):
         balance = parse_hdfc_balance(bill_page().page()).to_dict()
         with Session(self.engine) as session, session.begin():

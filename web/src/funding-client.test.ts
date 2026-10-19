@@ -75,3 +75,21 @@ it("distinguishes a definite database conflict from an uncertain network result"
     ),
   ).rejects.toBeInstanceOf(FundingError);
 });
+it("uses the transaction API without sending a caller-provided amount", async () => {
+  const api = {
+    rpc: vi.fn().mockResolvedValue({ data: null, error: { code: "PT409" } }),
+  };
+  await recordContribution(
+    api as unknown as BrowserClient,
+    scope,
+    { ...draft, amount: null, entry_ids: ["entry"] },
+    "state",
+    "owner",
+  ).catch(() => {});
+  expect(api.rpc.mock.calls[0][0]).toBe("record_transaction_contribution");
+  expect(api.rpc.mock.calls[0][1]).toMatchObject({
+    p_entry_ids: ["entry"],
+    p_expected_token: "state",
+  });
+  expect(api.rpc.mock.calls[0][1]).not.toHaveProperty("p_amount");
+});

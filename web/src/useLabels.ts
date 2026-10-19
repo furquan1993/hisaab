@@ -109,6 +109,10 @@ export function useLabels(api: BrowserClient | null, ownerId?: string) {
     loading,
     error,
     save,
+    remove: (id: string) =>
+      setLabels((current) =>
+        current.filter((label) => label.id !== id || label.kind !== "account"),
+      ),
     reload: () => setRefresh((n) => n + 1),
   };
 }

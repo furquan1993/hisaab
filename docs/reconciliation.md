@@ -23,10 +23,14 @@ Public frontend hosting is separate and remains blocked by the repository plan.
    competing sources remain visible. Use Statements or Imports to resolve them.
 5. Open **Contributions** for the desired card/account/month. The original-month
    balances include earlier obligations for that same card/account/currency.
-6. Enter a received date and optional note, then either record a positive partial
-   amount or use **Settle in full**. This records contributions received; it does
-   not pay the card bill or move money.
-7. Inspect contribution history to see exactly which original months were covered.
+6. **Selected transactions** is the default contribution method. Select one or more
+   debit transactions, enter a received date and optional note, and choose
+   **Settle selected transactions**. The contribution is exactly the total of the
+   selected transactions; each is settled completely, with no partial allocation.
+   You can select a newer transaction while leaving an older one unsettled.
+   **Monthly balance** retains the earlier partial/full monthly contribution flow.
+   These actions record contributions received; they do not move money or pay the card bill.
+7. Inspect contribution history to see exactly which transactions and original months were covered.
    A January balance paid in February still settles January.
 8. If later corrections affect a funded obligation, its month becomes **Needs
    review**. Provide a reason and confirm the revised balance before contributing
@@ -52,8 +56,19 @@ settlement obligation.
   numeric/decimal strings and frontend BigInt cents, not floating-point totals.
 - A negative monthly total is visible with no contribution due. Do not automatically
   offset it against another month or card.
-- Apply partial/full contributions to the oldest positive outstanding obligation
+- Transaction contributions settle only the explicitly selected positive debit
+  transactions within the same owner/card/account/currency, through the chosen
+  month. The server derives their full exact amounts; callers supply only IDs.
+  Selected transactions cannot be funded twice, including after a source revision
+  or account reassignment: immutable applications retain their logical identity.
+- Monthly balance contributions apply to the oldest positive outstanding obligation
   first within the same owner/card/account/currency, through the chosen month.
+- Earlier monthly contributions do not identify transactions. Transaction selection
+  is unavailable for months with such contributions; use Monthly balance there to
+  avoid counting the same contribution twice. No historical allocations are guessed.
+- Refunds and credits remain in monthly net balances. Selecting a whole debit can
+  exceed that month's net outstanding amount: the UI discloses this before recording,
+  and the existing over-contribution credit remains visible without being moved.
 - Arrears retain their original month. They are not copied into a new monthly charge.
 - Reject zero, negative, over-precise and excessive contributions. Record the
   received calendar date as entered, without shifting it through server time zones;
@@ -63,7 +78,7 @@ settlement obligation.
   over-contribution credit. Do not silently move that credit to another obligation.
 - Contributions are append-only; the browser does not edit or delete receipts.
   Automatic transfers, currency conversion, separate financial adjustments and
-  split transaction allocations are not implemented.
+  partial transaction allocations are not implemented.
 
 ## Minimal persistence
 
@@ -75,7 +90,9 @@ remain unchanged. No monthly balance or copied obligation table is added.
 - `contributions`: request UUID, owner/card/account/currency, through-month, exact
   amount, received date, optional note, actor, immutable original-month applications
   and the request snapshot used for idempotent retries. Applications contain the
-  amount and evidence fingerprint acknowledged for each original month.
+  amount and evidence fingerprint acknowledged for each original month. New
+  transaction applications also snapshot the selected entry ID, logical entry ID,
+  reviewed description and full amount, without changing old receipts.
 - `funding_confirmations`: append-only, reasoned acknowledgements of a changed
   original month's fingerprint. These do not edit earlier contributions.
 
@@ -92,6 +109,13 @@ it has contribution history, so money and changed-settlement warnings cannot van
 - `funding_attention`: competing, undated or coverage-unresolved statement sources.
 - `funding_entries`: owner-scoped, paginated included-entry drill-down.
 - `contributions`: owner-scoped receipt history; no direct table mutation grants.
+- `funding_transaction_entries`: owner-scoped, paginated eligible debit transactions
+  with logical identity, settled state and prior monthly contribution indicator.
+- `record_transaction_contribution`: request UUID, scope, unique nonempty entry ID
+  array (maximum 1000), received date, note, expected state token and owner guard.
+  Derives full amounts under the existing card/statement locks and persists the
+  exact selected transaction snapshots in original-month applications. Retries
+  accept reordered IDs as the same set; changed inputs conflict.
 - `funding_preview`: card/account/currency, through-month and captured owner context
   to coherent original-month balances plus a state token.
 - `record_contribution`: request UUID, scope, decimal text amount or full-balance
@@ -165,3 +189,24 @@ Pages hosting remains blocked by the current private-repository plan entitlement
 - https://www.postgresql.org/docs/17/functions-json.html
 - https://supabase.com/docs/reference/javascript/rpc
 - https://supabase.com/docs/guides/database/postgres/row-level-security
+
+## Transaction contribution rollout
+
+`0019_transaction_contributions` adds the owner-scoped transaction view and write
+function. It changes no base tables and rewrites no receipts. Downgrade refuses
+while transaction contribution history exists. Apply this migration before serving
+the updated frontend; otherwise the panel reports that balances/history could not
+load. The user approved the hosted rollout on 2026-10-19. A fresh private backup was
+checksummed, restored into an isolated password-protected database and rehearsed
+before the transactional upgrade from `0018_card_management` to
+`0019_transaction_contributions`. Full-transaction settlement, safe retries,
+duplicate rejection and owner isolation passed rollback-only probes. Existing
+records, financial views and original PDF bytes matched before and after the
+upgrade; no synthetic records were retained. The verified rollout record is
+`data/migration-rollout/transaction-contributions-verified-backup.json`, which
+references the protected pre-upgrade backup. The frontend release remains separate.
+No production database is changed by the implementation tests.
+
+The permissions and locking follow the PostgreSQL documentation for
+[invoker views](https://www.postgresql.org/docs/17/sql-createview.html) and
+[explicit locks](https://www.postgresql.org/docs/17/explicit-locking.html).

@@ -438,6 +438,7 @@ export default function Reconciliation({
                                           cardLabel={active.card_label}
                                           accountName={active.account_name}
                                           demoGroups={demo}
+                                          demoRows={demoRows}
                                           demoReceipts={receipts}
                                           onDemoReceipt={onReceipt}
                                           onDemoConfirm={onConfirm}

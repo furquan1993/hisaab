@@ -4,6 +4,7 @@ import {
   attentionSchema,
   contributionSchema,
   fundingGroupSchema,
+  fundingTransactionSchema,
   previewSchema,
   type ContributionDraft,
   type FundingScope,
@@ -107,7 +108,7 @@ export async function loadFundingDetail(
   ownerId: string,
   signal: AbortSignal,
 ) {
-  const [data, history] = await Promise.all([
+  const [data, history, transactions] = await Promise.all([
     rpc(api, "funding_preview", scopeArgs(scope, ownerId)),
     allPages(contributionSchema, (offset) =>
       api
@@ -121,8 +122,21 @@ export async function loadFundingDetail(
         .range(offset, offset + 99)
         .abortSignal(signal),
     ),
+    allPages(fundingTransactionSchema, (offset) =>
+      api
+        .from("funding_transaction_entries")
+        .select("*")
+        .eq("card_id", scope.card_id)
+        .eq("account_id", scope.account_id)
+        .eq("currency", scope.currency)
+        .lte("month", scope.month)
+        .order("month")
+        .order("id")
+        .range(offset, offset + 99)
+        .abortSignal(signal),
+    ),
   ]);
-  return { preview: previewSchema.parse(data), history };
+  return { preview: previewSchema.parse(data), history, transactions };
 }
 export async function recordContribution(
   api: BrowserClient,
@@ -132,14 +146,22 @@ export async function recordContribution(
   ownerId: string,
 ) {
   return contributionSchema.parse(
-    await rpc(api, "record_contribution", {
-      ...scopeArgs(scope, ownerId),
-      p_id: draft.id,
-      p_amount: draft.amount,
-      p_received_on: draft.received_on,
-      p_note: draft.note,
-      p_expected_token: token,
-    }),
+    await rpc(
+      api,
+      draft.entry_ids
+        ? "record_transaction_contribution"
+        : "record_contribution",
+      {
+        ...scopeArgs(scope, ownerId),
+        p_id: draft.id,
+        ...(draft.entry_ids
+          ? { p_entry_ids: draft.entry_ids }
+          : { p_amount: draft.amount }),
+        p_received_on: draft.received_on,
+        p_note: draft.note,
+        p_expected_token: token,
+      },
+    ),
   );
 }
 export async function confirmFunding(

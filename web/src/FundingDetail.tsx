@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import "./funding-transactions.css";
 import type { BrowserClient } from "./client";
+import type { Entry } from "./domain";
 import {
   FundingError,
   confirmFunding,
@@ -11,6 +13,7 @@ import {
   decimalText,
   demoContribution,
   demoPreview,
+  demoFundingTransactions,
   fundingMoney,
   sameScope,
   type Confirmation,
@@ -19,6 +22,7 @@ import {
   type FundingGroup,
   type FundingPreview,
   type FundingScope,
+  type FundingTransaction,
 } from "./funding-domain";
 
 export default function FundingDetail({
@@ -28,6 +32,7 @@ export default function FundingDetail({
   cardLabel,
   accountName,
   demoGroups,
+  demoRows,
   demoReceipts,
   onDemoReceipt,
   onDemoConfirm,
@@ -41,6 +46,7 @@ export default function FundingDetail({
   cardLabel: string;
   accountName: string;
   demoGroups: FundingGroup[];
+  demoRows: Entry[];
   demoReceipts: Contribution[];
   onDemoReceipt: (receipt: Contribution) => void;
   onDemoConfirm: (confirmation: Confirmation) => void;
@@ -51,7 +57,11 @@ export default function FundingDetail({
   const [data, setData] = useState<{
     preview: FundingPreview;
     history: Contribution[];
+    transactions: FundingTransaction[];
   } | null>(null);
+  const [mode, setMode] = useState<"transactions" | "month">("transactions");
+  // https://react.dev/reference/react-dom/components/input#controlling-an-input-with-a-state-variable
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [reload, setReload] = useState(0),
     [loading, setLoading] = useState(!!api),
     [busy, setBusy] = useState(false);
@@ -77,6 +87,7 @@ export default function FundingDetail({
     setLoading(true);
     setError("");
     setData(null);
+    setSelectedIds([]);
     if (!ownerId) {
       setError("Reload your signed-in workspace.");
       setLoading(false);
@@ -101,6 +112,12 @@ export default function FundingDetail({
   const history = api
     ? (data?.history ?? [])
     : demoReceipts.filter((r) => sameScope(r, scope));
+  const transactions = api
+    ? (data?.transactions ?? [])
+    : demoFundingTransactions(demoRows, demoReceipts, scope);
+  const selectedTotal = transactions
+    .filter((e) => selectedIds.includes(e.id))
+    .reduce((sum, e) => sum + cents(e.amount), 0n);
   const outstanding =
     preview?.groups.reduce((sum, g) => sum + cents(g.outstanding), 0n) ?? 0n;
   const blocked =
@@ -120,7 +137,13 @@ export default function FundingDetail({
       "full";
     if (!pending.current) {
       try {
-        if (!full && (cents(amount) <= 0n || cents(amount) > outstanding))
+        if (mode === "transactions" && !selectedIds.length)
+          throw Error("Select at least one transaction to settle in full.");
+        if (
+          mode === "month" &&
+          !full &&
+          (cents(amount) <= 0n || cents(amount) > outstanding)
+        )
           throw Error(
             "Enter a positive amount no greater than the outstanding balance.",
           );
@@ -133,9 +156,11 @@ export default function FundingDetail({
       pending.current = {
         draft: {
           id: crypto.randomUUID(),
-          amount: full ? null : decimalText(cents(amount)),
+          amount:
+            mode === "transactions" || full ? null : decimalText(cents(amount)),
           received_on: receivedOn,
           note,
+          ...(mode === "transactions" ? { entry_ids: [...selectedIds] } : {}),
         },
         token: preview.token,
       };
@@ -155,13 +180,22 @@ export default function FundingDetail({
         );
       } else
         onDemoReceipt(
-          demoContribution(demoGroups, scope, request.draft, request.token),
+          demoContribution(
+            demoGroups,
+            scope,
+            request.draft,
+            request.token,
+            transactions,
+          ),
         );
       pending.current = null;
       setAmount("");
       setNote("");
+      setSelectedIds([]);
       setNotice(
-        "Contribution recorded against its original statement month(s).",
+        request.draft.entry_ids
+          ? "Contribution recorded. Selected transactions settled in full."
+          : "Contribution recorded against its original statement month(s).",
       );
       setReload((n) => n + 1);
       onChanged();
@@ -238,9 +272,9 @@ export default function FundingDetail({
         </button>
       </div>
       <p>
-        Outstanding through {scope.month.slice(0, 7)}. Contributions clear the
-        oldest month first, on this card and account only. This records funding
-        received, not payment of the card bill.
+        Choose transactions through {scope.month.slice(0, 7)} to settle in full
+        on this card and account. This records contributions received, not
+        payment of the card bill.
       </p>
       {loading && <p role="status">Loading balances and history…</p>}
       {error && (
@@ -328,20 +362,111 @@ export default function FundingDetail({
               Outstanding:{" "}
               {fundingMoney(decimalText(outstanding), scope.currency)}
             </strong>
+            <label>
+              Contribute towards
+              <select
+                value={mode}
+                disabled={locked}
+                onChange={(e) => {
+                  setMode(e.target.value as "transactions" | "month");
+                  setSelectedIds([]);
+                }}
+              >
+                <option value="transactions">Selected transactions</option>
+                <option value="month">Monthly balance</option>
+              </select>
+            </label>
             <fieldset
               disabled={
-                busy || !!pending.current || blocked || outstanding === 0n
+                locked || blocked || (mode === "month" && outstanding === 0n)
               }
             >
+              {mode === "transactions" && (
+                <>
+                  <legend>Settle whole transactions</legend>
+                  <p>
+                    Select the transactions this contribution covers. Each
+                    selected transaction is settled completely.
+                  </p>
+                  {transactions.some((e) => e.legacy_funded && !e.settled) && (
+                    <p className="notice">
+                      Earlier monthly contributions do not identify individual
+                      transactions. Use Monthly balance for those months to
+                      avoid contributing twice.
+                    </p>
+                  )}
+                  {!transactions.length && (
+                    <p>
+                      No eligible debit transactions in this reconciliation.
+                    </p>
+                  )}
+                  <ul
+                    className="funding-transaction-list"
+                    aria-label="Transactions to settle"
+                  >
+                    {transactions.map((e) => (
+                      <li key={e.id}>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(e.id)}
+                            disabled={e.settled || e.legacy_funded}
+                            onChange={(event) =>
+                              setSelectedIds((ids) =>
+                                event.target.checked
+                                  ? [...ids, e.id]
+                                  : ids.filter((id) => id !== e.id),
+                              )
+                            }
+                          />
+                          {e.description} ·{" "}
+                          {fundingMoney(e.amount, scope.currency)}
+                        </label>
+                        <span>
+                          {e.transaction_date ?? "Date unknown"} · Statement{" "}
+                          {e.month.slice(0, 7)} ·{" "}
+                          {e.settled
+                            ? "Settled in full"
+                            : e.legacy_funded
+                              ? "Monthly contribution recorded"
+                              : "Unsettled"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <strong>
+                    Contribution total:{" "}
+                    {fundingMoney(decimalText(selectedTotal), scope.currency)}
+                  </strong>
+                  {preview.groups.some((g) => {
+                    const amount = transactions
+                      .filter(
+                        (e) =>
+                          e.month === g.month && selectedIds.includes(e.id),
+                      )
+                      .reduce((sum, e) => sum + cents(e.amount), 0n);
+                    return amount > cents(g.outstanding);
+                  }) && (
+                    <p className="notice">
+                      The selected whole transactions exceed a month's net
+                      outstanding balance. Refunds or credits remain visible as
+                      an over-contribution credit; they are not moved to other
+                      transactions.
+                    </p>
+                  )}
+                </>
+              )}
               <div className="decision-columns">
-                <label>
-                  Partial contribution amount
-                  <input
-                    inputMode="decimal"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                  />
-                </label>
+                {mode === "month" && (
+                  <label>
+                    Partial contribution amount
+                    <input
+                      inputMode="decimal"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                    />
+                  </label>
+                )}
                 <label>
                   Received on
                   <input
@@ -361,12 +486,23 @@ export default function FundingDetail({
                 </label>
               </div>
               <div className="form-actions">
-                <button type="submit" value="partial">
-                  Record partial contribution
-                </button>
-                <button type="submit" value="full">
-                  Settle in full
-                </button>
+                {mode === "transactions" ? (
+                  <button
+                    type="submit"
+                    disabled={!selectedIds.length || selectedIds.length > 1000}
+                  >
+                    Settle selected transactions
+                  </button>
+                ) : (
+                  <>
+                    <button type="submit" value="partial">
+                      Record partial contribution
+                    </button>
+                    <button type="submit" value="full">
+                      Settle in full
+                    </button>
+                  </>
+                )}
               </div>
             </fieldset>
             {pending.current && (
@@ -391,6 +527,17 @@ export default function FundingDetail({
               {r.applications.map((a) => (
                 <li key={a.month}>
                   {a.month.slice(0, 7)}: {fundingMoney(a.amount, r.currency)}
+                  {a.entries && (
+                    <ul>
+                      {a.entries.map((entry) => (
+                        <li key={entry.entry_id}>
+                          {entry.description} ·{" "}
+                          {fundingMoney(entry.amount, r.currency)} · Settled in
+                          full
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </li>
               ))}
             </ul>

@@ -7,7 +7,17 @@ try {
   });
   const failures = [];
   page.on("pageerror", (error) => failures.push(error.message));
-  await page.goto("http://127.0.0.1:5183/hisaab/");
+  await page.route("**/*", (route) => {
+    if (
+      ["127.0.0.1", "localhost"].includes(
+        new URL(route.request().url()).hostname,
+      )
+    )
+      return route.continue();
+    failures.push("Browser test attempted a nonlocal request");
+    return route.abort();
+  });
+  await page.goto(process.env.HISAAB_E2E_BASE_URL);
   await page
     .getByLabel("Email", { exact: true })
     .fill(process.env.HISAAB_E2E_EMAIL);
@@ -15,6 +25,8 @@ try {
     .getByLabel("Password", { exact: true })
     .fill(process.env.HISAAB_E2E_PASSWORD);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByLabel("From", { exact: true }).fill("2026-01-01");
+  await page.getByLabel("To", { exact: true }).fill("2026-02-28");
   await page.getByText("SYNTHETIC FEB SHOP", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Accounts", exact: true }).click();
   await page.getByLabel("Account name").fill("Synthetic funding");
@@ -46,7 +58,9 @@ try {
       .getByRole("button", { name: "Reconciliation", exact: true })
       .click();
     await page.getByLabel("Reconciliation year").fill(month.slice(0, 4));
-    await page.getByLabel("Reconciliation month").selectOption(month.slice(5, 7));
+    await page
+      .getByLabel("Reconciliation month")
+      .selectOption(month.slice(5, 7));
     await page
       .getByRole("button", {
         name: "View cards for Synthetic funding (INR)",
@@ -64,12 +78,15 @@ try {
       exact: true,
     });
     await expect(detail.getByRole("table")).toBeVisible();
+    await detail.getByLabel("Contribute towards").selectOption("month");
     return detail;
   }
   let detail = await openFunding("2026-01");
   await page.getByText("Included entries · 2026-01", { exact: true }).click();
   await expect(
-    page.getByRole("list", { name: "Included entries" }).getByText("SYNTHETIC SHOP", { exact: true }),
+    page
+      .getByRole("list", { name: "Included entries" })
+      .getByText("SYNTHETIC SHOP", { exact: true }),
   ).toBeVisible();
   await detail.getByLabel("Partial contribution amount").fill("60");
   await detail

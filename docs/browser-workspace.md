@@ -315,3 +315,11 @@ The **Cards** sidebar view supports adding and editing credit cards. See
 [card fields, behavior and rollout](cards.md). The approved
 `0018_card_management` database rollout completed on 2026-10-19 after backup
 restore verification and rehearsal. The frontend release is separate.
+
+
+The separately approved `0019_transaction_contributions` database rollout completed
+on 2026-10-19 after a checksummed backup, exact isolated restore and migration
+rehearsal. Transaction contribution probes were rolled back, preserving all
+original records, balances and PDF bytes. See [transaction reconciliation and
+rollout details](reconciliation.md#transaction-contribution-rollout). The updated
+transaction selection frontend is implemented locally; publishing it is separate.

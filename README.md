@@ -91,6 +91,11 @@ applied to the hosted database after explicit approval, verified backup/restore,
 rehearsal and rollback-only live checks. Public frontend hosting remains a separate
 blocked rollout. See [reconciliation and contributions](docs/reconciliation.md).
 
+Account deletion provides a full affected-transaction confirmation and atomic
+unassignment. The approved `0017_account_deletion` database rollout completed on
+2026-10-19 after a verified private backup and isolated restore rehearsal. See
+[account deletion](docs/account-deletion.md).
+
 ## Automatic assignments
 
 The [automatic assignment guide](docs/automatic-assignments.md) describes history

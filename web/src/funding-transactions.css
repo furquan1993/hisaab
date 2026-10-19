@@ -1,0 +1,29 @@
+.funding-transaction-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 24rem;
+  overflow-y: auto;
+}
+.funding-transaction-list > li {
+  padding: 12px 0;
+  border-bottom: 1px solid #e2e7df;
+  overflow-wrap: anywhere;
+}
+.decision-form .funding-transaction-list label {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+}
+.decision-form .funding-transaction-list input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 2px 0;
+  padding: 0;
+}
+.funding-transaction-list span {
+  display: block;
+  margin: 6px 0 0 28px;
+  font-size: 12px;
+}

@@ -51,6 +51,10 @@ it("records partial/full contributions and keeps arrears in January when paid in
   let detail = within(
     screen.getByRole("region", { name: "Contributions and balances" }),
   );
+  await user.selectOptions(
+    detail.getByLabelText("Contribute towards"),
+    "month",
+  );
   await user.type(detail.getByLabelText("Partial contribution amount"), "100");
   await user.click(
     detail.getByRole("button", { name: "Record partial contribution" }),
@@ -71,6 +75,10 @@ it("records partial/full contributions and keeps arrears in January when paid in
     screen.getByRole("region", { name: "Contributions and balances" }),
   );
   expect(detail.getByText("Outstanding: INR 1,119.00")).toBeTruthy();
+  await user.selectOptions(
+    detail.getByLabelText("Contribute towards"),
+    "month",
+  );
   await user.type(detail.getByLabelText("Partial contribution amount"), "250");
   await user.click(
     detail.getByRole("button", { name: "Record partial contribution" }),
@@ -114,6 +122,10 @@ it("shows included entries and blocks unassigned groups without blocking a ready
       name: "Contributions for YES Bank • demo · 2026-01",
     }),
   );
+  await user.selectOptions(
+    screen.getByLabelText("Contribute towards"),
+    "month",
+  );
   expect(
     (
       screen.getByRole("button", {
@@ -137,4 +149,49 @@ it("selects a reconciliation month and year without native month input support",
   await user.tab();
   expect((year as HTMLInputElement).value).toBe("2025");
   expect(screen.getByText("Account summary · 2025-12")).toBeTruthy();
+});
+
+it("settles a selected transaction completely and lists it in contribution history", async () => {
+  const user = await setup();
+  fireEvent.change(screen.getByLabelText("Reconciliation month"), {
+    target: { value: "02" },
+  });
+  await user.click(
+    screen.getByRole("button", { name: "View cards for Synthetic pot (INR)" }),
+  );
+  await user.click(
+    screen.getByRole("button", {
+      name: "Contributions for YES Bank • demo · 2026-02",
+    }),
+  );
+  const detail = within(
+    screen.getByRole("region", { name: "Contributions and balances" }),
+  );
+  await user.click(
+    detail.getByRole("checkbox", {
+      name: "Late-posted train ticket · INR 920.00",
+    }),
+  );
+  expect(detail.getByText("Contribution total: INR 920.00")).toBeTruthy();
+  await user.click(
+    detail.getByRole("button", { name: "Settle selected transactions" }),
+  );
+  expect(detail.getByText("Outstanding: INR 299.00")).toBeTruthy();
+  expect(
+    (
+      detail.getByRole("checkbox", {
+        name: "Late-posted train ticket · INR 920.00",
+      }) as HTMLInputElement
+    ).disabled,
+  ).toBe(true);
+  expect(
+    (
+      detail.getByRole("checkbox", {
+        name: "Streaming subscription · INR 299.00",
+      }) as HTMLInputElement
+    ).disabled,
+  ).toBe(false);
+  expect(
+    detail.getByText("Late-posted train ticket · INR 920.00 · Settled in full"),
+  ).toBeTruthy();
 });

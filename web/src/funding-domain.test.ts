@@ -6,6 +6,7 @@ import {
   demoContribution,
   demoFundingGroups,
   demoPreview,
+  demoFundingTransactions,
   fundingMoney,
 } from "./funding-domain";
 import type { Label } from "./useLabels";
@@ -37,6 +38,45 @@ it("keeps exact signed currency values beyond floating point precision", () => {
   );
   expect(fundingMoney("-0.01", "USD")).toBe("− USD 0.01");
   expect(() => cents("1.001")).toThrow();
+});
+it("fully settles only selected transactions and does not guess legacy allocations", () => {
+  const initial = demoFundingGroups(rows, [account], [], []);
+  const transactions = demoFundingTransactions(rows, [], scope);
+  const feb = transactions.find((e) => e.month === "2026-02-01")!;
+  const receipt = demoContribution(
+    initial,
+    scope,
+    { ...draft, amount: null, entry_ids: [feb.id] },
+    demoPreview(initial, scope).token,
+    transactions,
+  );
+  expect(receipt.amount).toBe("920.00");
+  expect(receipt.applications.map((a) => a.month)).toEqual(["2026-02-01"]);
+  expect(receipt.applications[0].entries?.[0].entry_id).toBe(feb.id);
+  const updated = demoFundingTransactions(rows, [receipt], scope);
+  expect(updated.find((e) => e.id === feb.id)?.settled).toBe(true);
+  expect(updated.find((e) => e.month === "2026-01-01")?.settled).toBe(false);
+  const groups = demoFundingGroups(rows, [account], [receipt], []);
+  expect(() =>
+    demoContribution(
+      groups,
+      scope,
+      { ...draft, entry_ids: [feb.id] },
+      demoPreview(groups, scope).token,
+      updated,
+    ),
+  ).toThrow();
+  const legacy = demoContribution(
+    initial,
+    scope,
+    draft,
+    demoPreview(initial, scope).token,
+  );
+  expect(
+    demoFundingTransactions(rows, [legacy], scope).find(
+      (e) => e.month === "2026-01-01",
+    )?.legacy_funded,
+  ).toBe(true);
 });
 it("allocates contributions oldest first and retains original statement months", () => {
   const initial = demoFundingGroups(rows, [account], [], []);
